@@ -66,6 +66,8 @@ public class Viaje {
 	}
 	
 	public EstadoViaje estadoActual() {
-		// TODO: Ver como se devuelve el estado del viaje.
+		// TODO: Ver como devolver estadoActual. 
+		// En el diagrama de clases figura como una relacion de 1 a 0-N.
+		// Es posible que un solo viaje tenga mas de un registro..?
 	}
 }
