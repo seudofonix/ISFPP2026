@@ -1,7 +1,7 @@
 /**
- * Instancia Supervisada de Formacion Practica Profesional (ISFPP) Ignacio Bullon, 2026. UNPSJB.
+ * Ignacio Bullon - Joel Erlan Hughes - Santiago Gittardi. ISFPP Programacion Orientada a Objetos 2026
  *
- * module-info.java
+ * Declara el módulo principal de la aplicación ISFPP2026.
  */
 module ISFPP2026 {
 }
