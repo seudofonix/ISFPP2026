@@ -1,0 +1,25 @@
+=======================================================
+               RESUMEN DE VIAJE SOLICITADO             
+=======================================================
+ID del Viaje:       453cf9be-dfe6-49f5-a4a2-2482b8c1f684
+Cliente:            Paula Vazquez (paula.vazquez@email.com)
+Origen:             Ubicacion [latitud=-42,65, longitud=-64,89]
+Destino:            Ubicacion [latitud=-42,86, longitud=-64,88]
+
+---------------- Detalle del Servicio -----------------
+Tipo/Categoría:     Premium [PASAJEROS - PREMIUM]
+Tarifa Base:        $3000.0
+
+---------------- Asignación Operativa -----------------
+Conductor:          Juan Perez (Tel: +549117363900)
+Vehículo Asignado:  Toyota Corolla [Patente: AD123BC]
+Calif. al Cliente:  EXCELENTE
+Calif. al Chofer:   EXCELENTE
+
+------------- Historial del Ciclo de Vida -------------
+ SOLICITADO      ->  [26/09/2026 13:54:05]
+ ACEPTADO        ->  [26/09/2026 13:54:05]
+ INICIADO        ->  [26/09/2026 13:54:05]
+ FINALIZADO      ->  [26/09/2026 13:54:05]
+=======================================================
+
