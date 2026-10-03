@@ -17,7 +17,7 @@ public class RegistroViaje {
 	 *
 	 * @param estado estado del viaje que se registra
 	 */
-	RegistroViaje(EstadoViaje estado) {
+	RegistroViaje(LocalDateTime fechaHora, EstadoViaje estado) {
 		estadoViaje = estado;
 		fechaHora = LocalDateTime.now();
 	}

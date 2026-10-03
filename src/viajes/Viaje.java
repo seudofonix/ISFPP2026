@@ -59,7 +59,7 @@ public class Viaje {
 	 * @param fechaHora fecha y hora en que se solicita el viaje
 	 */
 	public void solicitar(LocalDateTime fechaHora) {
-		registroViaje.addLast( new RegistroViaje( EstadoViaje.SOLICITADO ) );
+		registroViaje.addLast( new RegistroViaje( fechaHora, EstadoViaje.SOLICITADO ) );
 	}
 	
 	/**
@@ -69,7 +69,7 @@ public class Viaje {
 	 * @param conductor conductor que acepta el viaje
 	 */
 	public void aceptar(LocalDateTime fechaHora, Usuario conductor) {
-		registroViaje.addLast( new RegistroViaje( EstadoViaje.ACEPTADO ) );
+		registroViaje.addLast( new RegistroViaje( fechaHora, EstadoViaje.ACEPTADO ) );
 	}
 	
 	/**
@@ -78,7 +78,7 @@ public class Viaje {
 	 * @param fechaHora fecha y hora en que se inicia el viaje
 	 */
 	public void iniciar(LocalDateTime fechaHora) {
-		registroViaje.addLast( new RegistroViaje( EstadoViaje.INICIADO ) );
+		registroViaje.addLast( new RegistroViaje( fechaHora, EstadoViaje.INICIADO ) );
 	}
 	
 	/**
@@ -88,7 +88,7 @@ public class Viaje {
 	 * @param Calificacion calificación asociada a la finalización
 	 */
 	public void finalizar(LocalDateTime fechaHora, CalificacionViaje Calificacion) {
-		registroViaje.addLast( new RegistroViaje( EstadoViaje.FINALIZADO ) );
+		registroViaje.addLast( new RegistroViaje( fechaHora, EstadoViaje.FINALIZADO ) );
 	}
 	
 	/**
@@ -99,7 +99,7 @@ public class Viaje {
 	 * @param motivo motivo informado para la cancelación
 	 */
 	public void cancelar(LocalDateTime fechaHora, Usuario usuario, String motivo) {
-		registroViaje.addLast( new RegistroViaje( EstadoViaje.CANCELADO ) );
+		registroViaje.addLast( new RegistroViaje( fechaHora, EstadoViaje.CANCELADO ) );
 		motivoCancelacion = motivo;
 	}
 	
@@ -109,7 +109,7 @@ public class Viaje {
 	 * @param fechaHora fecha y hora en que se rechaza el viaje
 	 */
 	public void rechazar(LocalDateTime fechaHora) {
-		registroViaje.addLast( new RegistroViaje( EstadoViaje.RECHAZADO ) );
+		registroViaje.addLast( new RegistroViaje( fechaHora, EstadoViaje.RECHAZADO ) );
 	}
 	
 	/**
