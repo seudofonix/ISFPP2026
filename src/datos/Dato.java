@@ -24,32 +24,35 @@ public class Dato {
 
         HashMap<String, Vehiculo> vehiculos = new HashMap<>();
 
-        Scanner entrada = new Scanner(new File(nombreArchivo));
-
-        while (entrada.hasNextLine()) {
-            String linea = entrada.nextLine().trim();
-            if (linea.isEmpty() || linea.startsWith("#")) {
-                continue;
-            }
-            String[] partes = linea.split(";");
-            String patente = partes[0];
-            String modelo = partes[1];
-            int capacidad = Integer.parseInt(partes[2]);
-            TipoVehiculo tipo = TipoVehiculo.valueOf(partes[3]);
-            CategoriaVehiculo categoria = CategoriaVehiculo.valueOf(partes[4]);
-
-            Set<TipoServicio> servicios = new HashSet<>();
-            for (int i = 5; i < partes.length; i++) {
-                if (!partes[i].isBlank()) {
-                    servicios.add(TipoServicio.valueOf(partes[i]));
+        try (Scanner entrada = new Scanner(new File(nombreArchivo))) {
+            while (entrada.hasNextLine()) {
+                String linea = entrada.nextLine().trim();
+                if (linea.isEmpty() || linea.startsWith("#")) {
+                    continue;
                 }
+                String[] partes = linea.split(";");
+                if (partes.length < 5) {
+                    continue;
+                }
+                String patente = partes[0].trim();
+                String modelo = partes[1].trim();
+                int capacidad = Integer.parseInt(partes[2].trim());
+                TipoVehiculo tipo = TipoVehiculo.valueOf(partes[3].trim());
+                CategoriaVehiculo categoria = CategoriaVehiculo.valueOf(partes[4].trim());
+
+                Set<TipoServicio> servicios = new HashSet<>();
+                for (int i = 5; i < partes.length; i++) {
+                    String servicioStr = partes[i].trim();
+                    if (!servicioStr.isBlank()) {
+                        servicios.add(TipoServicio.valueOf(servicioStr));
+                    }
+                }
+
+                Vehiculo vehiculo = new Vehiculo(patente, modelo, capacidad, categoria, tipo, servicios);
+
+                vehiculos.put(patente, vehiculo);
             }
-
-            Vehiculo vehiculo = new Vehiculo(patente, modelo, categoria, tipo, servicios);
-
-            vehiculos.put(patente, vehiculo);
         }
-        entrada.close();
 
         return vehiculos;
     }
@@ -67,37 +70,56 @@ public class Dato {
 
         HashMap<String, Usuario> usuarios = new HashMap<>();
 
-        Scanner entrada = new Scanner(new File(nombreArchivo));
-        while (entrada.hasNextLine()) {
-            String linea = entrada.nextLine().trim();
-            if (linea.isEmpty() || linea.startsWith("#")) {
-                continue;
-            }
-            String[] partes = linea.split(";");
-            String nombre = partes[0];
-            String telefono = partes[1];
-            String email = partes[2];
+        try (Scanner entrada = new Scanner(new File(nombreArchivo))) {
+            while (entrada.hasNextLine()) {
+                String linea = entrada.nextLine().trim();
+                if (linea.isEmpty() || linea.startsWith("#")) {
+                    continue;
+                }
+                String[] partes = linea.split(";");
+                if (partes.length < 3) {
+                    continue;
+                }
+                String nombre = partes[0].trim();
+                String telefono = partes[1].trim();
+                String email = partes[2].trim();
 
-            Usuario usuario = new Usuario(nombre, telefono, email);
+                Usuario usuario = new Usuario(nombre, telefono, email);
 
-            if (partes.length > 4 && !partes[3].isBlank()) {
-                String licencia = partes[3];
-                Vehiculo primerVehiculo = vehiculos.get(partes[4]);
+                if (partes.length > 4 && !partes[3].isBlank()) {
+                    String licencia = partes[3].trim();
+                    Vehiculo primerVehiculo = null;
+                    int primerIndice = -1;
 
-                usuario.altaConductor(licencia, primerVehiculo);
+                    for (int i = 4; i < partes.length; i++) {
+                        String patente = partes[i].trim();
+                        if (!patente.isBlank()) {
+                            Vehiculo v = vehiculos.get(patente);
+                            if (v != null) {
+                                primerVehiculo = v;
+                                primerIndice = i;
+                                break;
+                            }
+                        }
+                    }
 
-                for (int i = 5; i < partes.length; i++) {
-                    if (!partes[i].isBlank()) {
-                        Vehiculo v = vehiculos.get(partes[i]);
-                        if (v != null) {
-                            usuario.getConductor().agregarVehiculo(v);
+                    if (primerVehiculo != null) {
+                        usuario.altaConductor(licencia, primerVehiculo);
+
+                        for (int i = primerIndice + 1; i < partes.length; i++) {
+                            String patente = partes[i].trim();
+                            if (!patente.isBlank()) {
+                                Vehiculo v = vehiculos.get(patente);
+                                if (v != null) {
+                                    usuario.getConductor().agregarVehiculo(v);
+                                }
+                            }
                         }
                     }
                 }
+                usuarios.put(email, usuario);
             }
-            usuarios.put(email, usuario);
         }
-        entrada.close();
 
         return usuarios;
     }
@@ -112,25 +134,28 @@ public class Dato {
 
         ArrayList<Servicio> servicios = new ArrayList<>();
 
-        Scanner entrada = new Scanner(new File(nombreArchivo));
-        while (entrada.hasNextLine()) {
-            String linea = entrada.nextLine().trim();
-            if (linea.isEmpty() || linea.startsWith("#")) {
-                continue;
-            }
-            String[] partes = linea.split(";");
-            String nombre = partes[0];
-            double tarifaBase = Double.parseDouble(partes[1]);
-            double precioKm = Double.parseDouble(partes[2]);
-            double precioMinuto = Double.parseDouble(partes[3]);
-            TipoVehiculo tipoVehiculo = TipoVehiculo.valueOf(partes[4]);
-            CategoriaVehiculo categoriaVehiculo = CategoriaVehiculo.valueOf(partes[5]);
-            TipoServicio tipoServicio = TipoServicio.valueOf(partes[6]);
+        try (Scanner entrada = new Scanner(new File(nombreArchivo))) {
+            while (entrada.hasNextLine()) {
+                String linea = entrada.nextLine().trim();
+                if (linea.isEmpty() || linea.startsWith("#")) {
+                    continue;
+                }
+                String[] partes = linea.split(";");
+                if (partes.length < 7) {
+                    continue;
+                }
+                String nombre = partes[0].trim();
+                double tarifaBase = Double.parseDouble(partes[1].trim());
+                double precioKm = Double.parseDouble(partes[2].trim());
+                double precioMinuto = Double.parseDouble(partes[3].trim());
+                TipoVehiculo tipoVehiculo = TipoVehiculo.valueOf(partes[4].trim());
+                CategoriaVehiculo categoriaVehiculo = CategoriaVehiculo.valueOf(partes[5].trim());
+                TipoServicio tipoServicio = TipoServicio.valueOf(partes[6].trim());
 
-            Servicio servicio = new Servicio(nombre, tarifaBase, precioKm, precioMinuto, tipoVehiculo, categoriaVehiculo, tipoServicio);
-            servicios.add(servicio);
+                Servicio servicio = new Servicio(nombre, tarifaBase, precioKm, precioMinuto, tipoVehiculo, categoriaVehiculo, tipoServicio);
+                servicios.add(servicio);
+            }
         }
-        entrada.close();
 
         return servicios;
     }

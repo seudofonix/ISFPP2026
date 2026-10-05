@@ -5,6 +5,7 @@
  */
 package datos;
 
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -18,11 +19,20 @@ public class CargarParametros {
 
     public static void parametros() throws IOException {
         Properties properties = new Properties();
-        InputStream entrada = new FileInputStream("config.properties");
-        properties.load(entrada);
-        archivoUsuarios = properties.getProperty("usuario");
-        archivoServicios = properties.getProperty("servicio");
-        archivoVehiculos = properties.getProperty("vehiculo");
+        InputStream entrada = CargarParametros.class.getClassLoader().getResourceAsStream("config.properties");
+        if (entrada == null) {
+            File archivoConfig = new File("config.properties");
+            if (!archivoConfig.exists()) {
+                archivoConfig = new File("src/config.properties");
+            }
+            entrada = new FileInputStream(archivoConfig);
+        }
+        try (InputStream in = entrada) {
+            properties.load(in);
+            archivoUsuarios = properties.getProperty("usuario");
+            archivoServicios = properties.getProperty("servicio");
+            archivoVehiculos = properties.getProperty("vehiculo");
+        }
     }
 
     public static String getArchivoUsuarios() {
