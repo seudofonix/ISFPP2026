@@ -5,29 +5,17 @@
  */
 package viajes;
 
-import java.util.UUID;
-import java.time.*;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
+import java.util.UUID;
 
 import servicio.*;
 import ubicacion.*;
 import usuario.*;
-import vehiculo.*;
-import viajes.EstadoViaje;
 
 public class Viaje {
-	
-	/**
-	 * Enumera las calificaciones que pueden asignarse a los participantes de un viaje.
-	 */
-	private enum CalificacionViaje {
-		NO_CALIFICADO,
-		MALO,
-		REGULAR,
-		BUENO,
-		MUY_BUENO,
-		EXCELENTE
-	}
 	
 	private UUID id;
 	private List<RegistroViaje> registroViaje;
@@ -49,8 +37,27 @@ public class Viaje {
 	/**
 	 * Crea un viaje pendiente de inicializar con su identificador y datos operativos.
 	 */
-	Viaje() {
-		// TODO: Inicializar el UUID.
+	public Viaje() {
+		this.id = UUID.randomUUID();
+		this.registroViaje = new ArrayList<>();
+		this.calificacionConductor = CalificacionViaje.NO_CALIFICADO;
+		this.calificacionCliente = CalificacionViaje.NO_CALIFICADO;
+	}
+
+	/**
+	 * Crea un viaje con los participantes y ubicaciones iniciales.
+	 *
+	 * @param cliente usuario que solicita el servicio
+	 * @param origen ubicación de partida
+	 * @param destino ubicación de llegada
+	 * @param servicio servicio de transporte seleccionado
+	 */
+	public Viaje(Usuario cliente, Ubicacion origen, Ubicacion destino, Servicio servicio) {
+		this();
+		this.cliente = cliente;
+		this.origen = origen;
+		this.destino = destino;
+		this.servicio = servicio;
 	}
 	
 	/**
@@ -59,7 +66,7 @@ public class Viaje {
 	 * @param fechaHora fecha y hora en que se solicita el viaje
 	 */
 	public void solicitar(LocalDateTime fechaHora) {
-		registroViaje.addLast( new RegistroViaje( fechaHora, EstadoViaje.SOLICITADO ) );
+		registroViaje.add(new RegistroViaje(fechaHora, EstadoViaje.SOLICITADO));
 	}
 	
 	/**
@@ -69,7 +76,8 @@ public class Viaje {
 	 * @param conductor conductor que acepta el viaje
 	 */
 	public void aceptar(LocalDateTime fechaHora, Usuario conductor) {
-		registroViaje.addLast( new RegistroViaje( fechaHora, EstadoViaje.ACEPTADO ) );
+		this.conductor = conductor;
+		registroViaje.add(new RegistroViaje(fechaHora, EstadoViaje.ACEPTADO));
 	}
 	
 	/**
@@ -78,29 +86,51 @@ public class Viaje {
 	 * @param fechaHora fecha y hora en que se inicia el viaje
 	 */
 	public void iniciar(LocalDateTime fechaHora) {
-		registroViaje.addLast( new RegistroViaje( fechaHora, EstadoViaje.INICIADO ) );
+		registroViaje.add(new RegistroViaje(fechaHora, EstadoViaje.INICIADO));
 	}
 	
 	/**
-	 * Registra la finalización del viaje y recibe la calificación correspondiente.
+	 * Registra la finalización del viaje y asigna las calificaciones correspondientes.
 	 *
 	 * @param fechaHora fecha y hora en que finaliza el viaje
-	 * @param Calificacion calificación asociada a la finalización
+	 * @param calificacionConductor calificación otorgada al conductor
+	 * @param calificacionCliente calificación otorgada al cliente
 	 */
-	public void finalizar(LocalDateTime fechaHora, CalificacionViaje Calificacion) {
-		registroViaje.addLast( new RegistroViaje( fechaHora, EstadoViaje.FINALIZADO ) );
+	public void finalizar(LocalDateTime fechaHora, CalificacionViaje calificacionConductor, CalificacionViaje calificacionCliente) {
+		registroViaje.add(new RegistroViaje(fechaHora, EstadoViaje.FINALIZADO));
+		this.calificacionConductor = calificacionConductor;
+		this.calificacionCliente = calificacionCliente;
+	}
+
+	/**
+	 * Registra la finalización del viaje y recibe una única calificación común.
+	 *
+	 * @param fechaHora fecha y hora en que finaliza el viaje
+	 * @param calificacion calificación común otorgada a ambos participantes
+	 */
+	public void finalizar(LocalDateTime fechaHora, CalificacionViaje calificacion) {
+		finalizar(fechaHora, calificacion, calificacion);
 	}
 	
 	/**
-	 * Registra la cancelación del viaje y conserva su motivo.
+	 * Registra la cancelación del viaje y conserva su motivo y el rol del participante que cancela.
 	 *
 	 * @param fechaHora fecha y hora en que se cancela el viaje
 	 * @param usuario usuario que realiza la cancelación
 	 * @param motivo motivo informado para la cancelación
 	 */
 	public void cancelar(LocalDateTime fechaHora, Usuario usuario, String motivo) {
-		registroViaje.addLast( new RegistroViaje( fechaHora, EstadoViaje.CANCELADO ) );
-		motivoCancelacion = motivo;
+		registroViaje.add(new RegistroViaje(fechaHora, EstadoViaje.CANCELADO));
+		this.motivoCancelacion = motivo;
+		if (usuario != null) {
+			if (usuario.equals(this.cliente)) {
+				this.rolCancela = RolUsuario.CLIENTE;
+			} else if (usuario.equals(this.conductor)) {
+				this.rolCancela = RolUsuario.CONDUCTOR;
+			} else {
+				this.rolCancela = usuario.getRolActivo();
+			}
+		}
 	}
 	
 	/**
@@ -109,19 +139,137 @@ public class Viaje {
 	 * @param fechaHora fecha y hora en que se rechaza el viaje
 	 */
 	public void rechazar(LocalDateTime fechaHora) {
-		registroViaje.addLast( new RegistroViaje( fechaHora, EstadoViaje.RECHAZADO ) );
+		registroViaje.add(new RegistroViaje(fechaHora, EstadoViaje.RECHAZADO));
 	}
 	
 	/**
 	 * Obtiene el último estado registrado para el viaje.
 	 *
-	 * @return estado actual del viaje
+	 * @return estado actual del viaje, o null si no posee registros
 	 */
 	public EstadoViaje estadoActual() {
-		
-		 // Devolver el ultimo cambio de estado registrado.  
-		 return registroViaje.getLast().getEstadoViaje();
+		if (registroViaje == null || registroViaje.isEmpty()) {
+			return null;
+		}
+		return registroViaje.getLast().getEstadoViaje();
 	}
 
-	// TODO: Incorporar getters, setters, hashCode y equals.
+	public UUID getId() {
+		return id;
+	}
+
+	public void setId(UUID id) {
+		this.id = id;
+	}
+
+	public List<RegistroViaje> getRegistroViaje() {
+		return new ArrayList<>(registroViaje);
+	}
+
+	public void setRegistroViaje(List<RegistroViaje> registroViaje) {
+		this.registroViaje = registroViaje != null ? new ArrayList<>(registroViaje) : new ArrayList<>();
+	}
+
+	public Usuario getCliente() {
+		return cliente;
+	}
+
+	public void setCliente(Usuario cliente) {
+		this.cliente = cliente;
+	}
+
+	public Usuario getConductor() {
+		return conductor;
+	}
+
+	public void setConductor(Usuario conductor) {
+		this.conductor = conductor;
+	}
+
+	public Ubicacion getOrigen() {
+		return origen;
+	}
+
+	public void setOrigen(Ubicacion origen) {
+		this.origen = origen;
+	}
+
+	public Ubicacion getDestino() {
+		return destino;
+	}
+
+	public void setDestino(Ubicacion destino) {
+		this.destino = destino;
+	}
+
+	public CalificacionViaje getCalificacionConductor() {
+		return calificacionConductor;
+	}
+
+	public void setCalificacionConductor(CalificacionViaje calificacionConductor) {
+		this.calificacionConductor = calificacionConductor;
+	}
+
+	public CalificacionViaje getCalificacionCliente() {
+		return calificacionCliente;
+	}
+
+	public void setCalificacionCliente(CalificacionViaje calificacionCliente) {
+		this.calificacionCliente = calificacionCliente;
+	}
+
+	public RolUsuario getRolCancela() {
+		return rolCancela;
+	}
+
+	public void setRolCancela(RolUsuario rolCancela) {
+		this.rolCancela = rolCancela;
+	}
+
+	public String getMotivoCancelacion() {
+		return motivoCancelacion;
+	}
+
+	public void setMotivoCancelacion(String motivoCancelacion) {
+		this.motivoCancelacion = motivoCancelacion;
+	}
+
+	public Servicio getServicio() {
+		return servicio;
+	}
+
+	public void setServicio(Servicio servicio) {
+		this.servicio = servicio;
+	}
+
+	@Override
+	public boolean equals(Object o) {
+		if (this == o) return true;
+		if (o == null || getClass() != o.getClass()) return false;
+		Viaje viaje = (Viaje) o;
+		return Objects.equals(id, viaje.id);
+	}
+
+	@Override
+	public int hashCode() {
+		return Objects.hashCode(id);
+	}
+
+	@Override
+	public String toString() {
+		return "Viaje{" +
+				"id=" + id +
+				", cliente=" + (cliente != null ? cliente.getNombre() : "null") +
+				", conductor=" + (conductor != null ? conductor.getNombre() : "null") +
+				", origen=" + origen +
+				", destino=" + destino +
+				", servicio=" + (servicio != null ? servicio.getNombre() : "null") +
+				", estadoActual=" + estadoActual() +
+				", calificacionConductor=" + calificacionConductor +
+				", calificacionCliente=" + calificacionCliente +
+				", rolCancela=" + rolCancela +
+				", motivoCancelacion='" + motivoCancelacion + '\'' +
+				", registroViaje=" + registroViaje +
+				'}';
+	}
 }
