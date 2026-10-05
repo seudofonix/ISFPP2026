@@ -6,22 +6,24 @@
 package viajes;
 
 import java.time.*;
+import java.util.Objects;
 
 public class RegistroViaje {
 	
-	LocalDateTime fechaHora;
+	private LocalDateTime fechaHora;
 	private EstadoViaje estadoViaje;
 	
 	/**
-	 * Crea un registro con el estado indicado y la fecha y hora actuales.
+	 * Crea un registro con la fecha, hora y estado indicados.
 	 *
+	 * @param fechaHora fecha y hora en que se registra el evento
 	 * @param estado estado del viaje que se registra
 	 */
-	RegistroViaje(LocalDateTime fechaHora, EstadoViaje estado) {
-		estadoViaje = estado;
-		fechaHora = LocalDateTime.now();
+	public RegistroViaje(LocalDateTime fechaHora, EstadoViaje estado) {
+		this.estadoViaje = estado;
+		this.fechaHora = (fechaHora != null) ? fechaHora : LocalDateTime.now();
 	}
-	
+
 	/**
 	 * Obtiene la fecha y hora en que se registró el cambio de estado.
 	 *
@@ -55,5 +57,23 @@ public class RegistroViaje {
 		this.estadoViaje = estadoViaje;
 	}
 
-	// TODO: Incorporar hashCode y equals.
+	@Override
+	public boolean equals(Object o) {
+		if (o == null || getClass() != o.getClass()) return false;
+		RegistroViaje that = (RegistroViaje) o;
+		return Objects.equals(fechaHora, that.fechaHora) && estadoViaje == that.estadoViaje;
+	}
+
+	@Override
+	public int hashCode() {
+		return Objects.hash(fechaHora, estadoViaje);
+	}
+
+	@Override
+	public String toString() {
+		return "RegistroViaje{" +
+				"fechaHora=" + fechaHora +
+				", estadoViaje=" + estadoViaje +
+				'}';
+	}
 }
