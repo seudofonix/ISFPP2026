@@ -94,8 +94,12 @@ public class Servicio {
 
     @Override
     public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
+        if (this == o) {
+			return true;
+		}
+        if (o == null || getClass() != o.getClass()) {
+			return false;
+		}
         Servicio servicio = (Servicio) o;
         return Objects.equals(nombre, servicio.nombre) &&
                tipoVehiculo == servicio.tipoVehiculo &&

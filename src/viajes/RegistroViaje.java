@@ -5,14 +5,14 @@
  */
 package viajes;
 
-import java.time.*;
+import java.time.LocalDateTime;
 import java.util.Objects;
 
 public class RegistroViaje {
-	
+
 	private LocalDateTime fechaHora;
 	private EstadoViaje estadoViaje;
-	
+
 	/**
 	 * Crea un registro con la fecha, hora y estado indicados.
 	 *
@@ -59,7 +59,9 @@ public class RegistroViaje {
 
 	@Override
 	public boolean equals(Object o) {
-		if (o == null || getClass() != o.getClass()) return false;
+		if (o == null || getClass() != o.getClass()) {
+			return false;
+		}
 		RegistroViaje that = (RegistroViaje) o;
 		return Objects.equals(fechaHora, that.fechaHora) && estadoViaje == that.estadoViaje;
 	}

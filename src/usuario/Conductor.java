@@ -5,12 +5,15 @@
  */
 package usuario;
 
-import servicio.*;
-import ubicacion.*;
-import vehiculo.*;
-import viajes.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 
-import java.util.*;
+import vehiculo.CategoriaVehiculo;
+import vehiculo.Vehiculo;
+import viajes.Viaje;
 
 public class Conductor {
 
@@ -86,7 +89,9 @@ public class Conductor {
 
     @Override
     public boolean equals(Object o) {
-        if (o == null || getClass() != o.getClass()) return false;
+        if (o == null || getClass() != o.getClass()) {
+			return false;
+		}
         Conductor conductor = (Conductor) o;
         return Objects.equals(licenciaConducir, conductor.licenciaConducir);
     }

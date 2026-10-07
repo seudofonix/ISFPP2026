@@ -5,13 +5,11 @@
  */
 package usuario;
 
-import servicio.*;
-import ubicacion.*;
-import vehiculo.*;
-import viajes.*;
-
 import java.util.ArrayList;
 import java.util.List;
+
+import viajes.EstadoViaje;
+import viajes.Viaje;
 
 public class Cliente {
 
@@ -34,8 +32,25 @@ public class Cliente {
      * @return true si es cliente esta actualmente en un viaje o false si este no se encuentra en uno.
      */
     public boolean enViaje() {
-        if (viajes.isEmpty()) return false;
-        return viajes.getLast().estadoActual() == EstadoViaje.INICIADO;
+        if (viajes.isEmpty()) {
+			return false;
+		}
+        switch ( viajes.getLast().estadoActual() ) {
+        
+        
+	        case EstadoViaje.INICIADO:
+	        case EstadoViaje.SOLICITADO:
+	        case EstadoViaje.ACEPTADO:
+	        return true;
+	        
+	        case EstadoViaje.RECHAZADO:
+	        case EstadoViaje.CANCELADO:
+	        case EstadoViaje.FINALIZADO:
+	        return false;
+        	
+	        default:  // Eclipse qlo
+	        	return false;
+        }
     }
 
 

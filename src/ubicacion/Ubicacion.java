@@ -35,7 +35,9 @@ public class Ubicacion {
      * Calcula la distancia estimada en kilómetros hacia otra ubicación usando la fórmula de Haversine.
      */
     public double calcularDistancia(Ubicacion otraUbicacion) {
-        if (otraUbicacion == null) return 0.0;
+        if (otraUbicacion == null) {
+			return 0.0;
+		}
 
         final int RADIO_TIERRA_KM = 6371;
 
@@ -54,8 +56,12 @@ public class Ubicacion {
 
     @Override
     public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
+        if (this == o) {
+			return true;
+		}
+        if (o == null || getClass() != o.getClass()) {
+			return false;
+		}
         Ubicacion ubicacion = (Ubicacion) o;
         return Double.compare(ubicacion.latitud, latitud) == 0 &&
                Double.compare(ubicacion.longitud, longitud) == 0;

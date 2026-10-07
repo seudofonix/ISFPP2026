@@ -9,18 +9,15 @@ import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
 
-import servicio.*;
-import ubicacion.*;
-import usuario.*;
-import viajes.*;
+import servicio.TipoServicio;
 
 public class Vehiculo {
-	
+
 	private String patente;
 	private String modelo;
-	
+
 	private int capacidadPasajeros;
-	
+
 	private CategoriaVehiculo categoriaVehiculo;
 	private TipoVehiculo tipoVehiculo;
 	private Set<TipoServicio> tipoServicio; // Un vehiculo puede ser de ambos tipos al mismo tiempo.
@@ -35,16 +32,18 @@ public class Vehiculo {
 	 * @param tipo tipo físico del vehículo
 	 * @param servicio tipos de servicio que puede prestar
 	 */
-	public Vehiculo(String patente, String modelo, int capacidad, CategoriaVehiculo categoria,
-			TipoVehiculo tipo, Set<TipoServicio> servicio) {
-		
+	public Vehiculo(String patente, String modelo, int capacidad,TipoVehiculo tipo,
+			CategoriaVehiculo categoria, TipoServicio servicio) {
+
 		this.patente = patente;
 		this.modelo = modelo;
 		this.capacidadPasajeros = capacidad;
 		categoriaVehiculo = categoria;
 		tipoVehiculo = tipo;
-		tipoServicio = servicio;
 		
+		tipoServicio = new HashSet<TipoServicio>();
+		tipoServicio.add(servicio);
+
 	}
 
 
@@ -105,7 +104,9 @@ public class Vehiculo {
 
 	@Override
 	public boolean equals(Object o) {
-		if (o == null || getClass() != o.getClass()) return false;
+		if (o == null || getClass() != o.getClass()) {
+			return false;
+		}
 		Vehiculo vehiculo = (Vehiculo) o;
 		return Objects.equals(patente, vehiculo.patente);
 	}

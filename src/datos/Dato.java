@@ -7,10 +7,18 @@ package datos;
 
 import java.io.File;
 import java.io.FileNotFoundException;
-import java.util.*;
-import servicio.*;
-import usuario.*;
-import vehiculo.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Scanner;
+import java.util.Set;
+
+import servicio.Servicio;
+import servicio.TipoServicio;
+import usuario.Usuario;
+import vehiculo.CategoriaVehiculo;
+import vehiculo.TipoVehiculo;
+import vehiculo.Vehiculo;
 
 public class Dato {
 

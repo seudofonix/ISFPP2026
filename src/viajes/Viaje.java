@@ -11,29 +11,36 @@ import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 
-import servicio.*;
-import ubicacion.*;
-import usuario.*;
+import servicio.Servicio;
+import ubicacion.Ubicacion;
+import usuario.RolUsuario;
+import usuario.Usuario;
+import usuario.Cliente;
+import usuario.Conductor;
+import vehiculo.Vehiculo;
+
 
 public class Viaje {
-	
+
 	private UUID id;
 	private List<RegistroViaje> registroViaje;
-	
+
 	private Usuario cliente;
 	private Usuario conductor;
-	
+
 	private Ubicacion origen;
 	private Ubicacion destino;
+
+	private Vehiculo vehiculo;
 	
 	private CalificacionViaje calificacionConductor = CalificacionViaje.NO_CALIFICADO;
 	private CalificacionViaje calificacionCliente = CalificacionViaje.NO_CALIFICADO;
-	
+
 	private RolUsuario rolCancela;
 	private String motivoCancelacion;
-	
+
 	private Servicio servicio;
-	
+
 	/**
 	 * Crea un viaje pendiente de inicializar con su identificador y datos operativos.
 	 */
@@ -42,6 +49,7 @@ public class Viaje {
 		this.registroViaje = new ArrayList<>();
 		this.calificacionConductor = CalificacionViaje.NO_CALIFICADO;
 		this.calificacionCliente = CalificacionViaje.NO_CALIFICADO;
+		registroViaje = new ArrayList<RegistroViaje>();
 	}
 
 	/**
@@ -53,13 +61,13 @@ public class Viaje {
 	 * @param servicio servicio de transporte seleccionado
 	 */
 	public Viaje(Usuario cliente, Ubicacion origen, Ubicacion destino, Servicio servicio) {
-		this();
 		this.cliente = cliente;
 		this.origen = origen;
 		this.destino = destino;
 		this.servicio = servicio;
+		registroViaje = new ArrayList<RegistroViaje>();
 	}
-	
+
 	/**
 	 * Registra la solicitud del viaje.
 	 *
@@ -67,8 +75,10 @@ public class Viaje {
 	 */
 	public void solicitar(LocalDateTime fechaHora) {
 		registroViaje.add(new RegistroViaje(fechaHora, EstadoViaje.SOLICITADO));
+		cliente.getCliente().agregarViaje(this);
+		// TODO: 
 	}
-	
+
 	/**
 	 * Registra la aceptación del viaje por un conductor.
 	 *
@@ -78,8 +88,9 @@ public class Viaje {
 	public void aceptar(LocalDateTime fechaHora, Usuario conductor) {
 		this.conductor = conductor;
 		registroViaje.add(new RegistroViaje(fechaHora, EstadoViaje.ACEPTADO));
+		
 	}
-	
+
 	/**
 	 * Registra el inicio del viaje.
 	 *
@@ -88,7 +99,7 @@ public class Viaje {
 	public void iniciar(LocalDateTime fechaHora) {
 		registroViaje.add(new RegistroViaje(fechaHora, EstadoViaje.INICIADO));
 	}
-	
+
 	/**
 	 * Registra la finalización del viaje y asigna las calificaciones correspondientes.
 	 *
@@ -111,7 +122,7 @@ public class Viaje {
 	public void finalizar(LocalDateTime fechaHora, CalificacionViaje calificacion) {
 		finalizar(fechaHora, calificacion, calificacion);
 	}
-	
+
 	/**
 	 * Registra la cancelación del viaje y conserva su motivo y el rol del participante que cancela.
 	 *
@@ -132,7 +143,7 @@ public class Viaje {
 			}
 		}
 	}
-	
+
 	/**
 	 * Registra el rechazo del viaje.
 	 *
@@ -141,7 +152,7 @@ public class Viaje {
 	public void rechazar(LocalDateTime fechaHora) {
 		registroViaje.add(new RegistroViaje(fechaHora, EstadoViaje.RECHAZADO));
 	}
-	
+
 	/**
 	 * Obtiene el último estado registrado para el viaje.
 	 *
@@ -201,6 +212,14 @@ public class Viaje {
 	public void setDestino(Ubicacion destino) {
 		this.destino = destino;
 	}
+	
+	public Vehiculo getVehiculo() {
+		return vehiculo;
+	}
+
+	public void setVehiculo(Vehiculo vehiculo) {
+		this.vehiculo = vehiculo;
+	}
 
 	public CalificacionViaje getCalificacionConductor() {
 		return calificacionConductor;
@@ -241,11 +260,17 @@ public class Viaje {
 	public void setServicio(Servicio servicio) {
 		this.servicio = servicio;
 	}
+	
+	
 
 	@Override
 	public boolean equals(Object o) {
-		if (this == o) return true;
-		if (o == null || getClass() != o.getClass()) return false;
+		if (this == o) {
+			return true;
+		}
+		if (o == null || getClass() != o.getClass()) {
+			return false;
+		}
 		Viaje viaje = (Viaje) o;
 		return Objects.equals(id, viaje.id);
 	}

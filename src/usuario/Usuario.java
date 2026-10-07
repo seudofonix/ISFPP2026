@@ -5,12 +5,9 @@
  */
 package usuario;
 
-import servicio.*;
-import ubicacion.*;
-import vehiculo.*;
-import viajes.*;
-
 import java.util.Objects;
+
+import vehiculo.Vehiculo;
 
 public class Usuario {
 
@@ -96,7 +93,9 @@ public class Usuario {
 
     @Override
     public boolean equals(Object o) {
-        if (o == null || getClass() != o.getClass()) return false;
+        if (o == null || getClass() != o.getClass()) {
+			return false;
+		}
         Usuario usuario = (Usuario) o;
         return Objects.equals(nombre, usuario.nombre) && Objects.equals(telefono, usuario.telefono);
     }
