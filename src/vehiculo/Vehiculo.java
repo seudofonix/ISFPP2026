@@ -33,6 +33,23 @@ public class Vehiculo {
 	 * @param tipo      tipo físico del vehículo
 	 * @param servicio  tipos de servicio que puede prestar
 	 */
+	
+	// Constructor bonito que clona el set parametro
+	public Vehiculo(String patente, String modelo, int capacidad, TipoVehiculo tipo, CategoriaVehiculo categoria,
+			Set<TipoServicio> servicio) {
+
+		this.patente = patente;
+		this.modelo = modelo;
+		this.capacidadPasajeros = capacidad;
+		categoriaVehiculo = categoria;
+		tipoVehiculo = tipo;
+
+		// Instancia nueva del Set parametro. 
+		tipoServicio = new HashSet<TipoServicio>(servicio);
+
+	}
+	
+	// Construtor feito que usa TipoServicio para no romper los junits del campus >:(
 	public Vehiculo(String patente, String modelo, int capacidad, TipoVehiculo tipo, CategoriaVehiculo categoria,
 			TipoServicio servicio) {
 
@@ -41,11 +58,13 @@ public class Vehiculo {
 		this.capacidadPasajeros = capacidad;
 		categoriaVehiculo = categoria;
 		tipoVehiculo = tipo;
-
+ 
 		tipoServicio = new HashSet<TipoServicio>();
 		tipoServicio.add(servicio);
 
 	}
+	
+	
 
 	public String getPatente() {
 

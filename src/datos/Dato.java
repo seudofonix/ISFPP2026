@@ -55,9 +55,10 @@ public class Dato {
                         servicios.add(TipoServicio.valueOf(servicioStr));
                     }
                 }
+                
+                Vehiculo vehiculo = new Vehiculo(patente, modelo, capacidad, tipo, categoria, servicios);
 
-                Vehiculo vehiculo = new Vehiculo(patente, modelo, capacidad, categoria, tipo, servicios);
-
+                
                 vehiculos.put(patente, vehiculo);
             }
         }
