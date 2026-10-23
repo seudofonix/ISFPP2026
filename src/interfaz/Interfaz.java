@@ -7,5 +7,6 @@ package interfaz;
 
 public class Interfaz {
 
-	// TODO: Incorporar getters, setters, hashCode y equals cuando se definan sus atributos.
+	// TODO: Incorporar getters, setters, hashCode y equals cuando se definan sus
+	// atributos.
 }

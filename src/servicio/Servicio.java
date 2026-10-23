@@ -8,120 +8,137 @@ import java.util.Objects;
 import vehiculo.CategoriaVehiculo;
 import vehiculo.TipoVehiculo;
 
+
 public class Servicio {
 
-    private String nombre;
-    private double tarifaBase;
-    private double precioKm;
-    private double precioMinuto;
-    private TipoVehiculo tipoVehiculo;
-    private CategoriaVehiculo categoriaVehiculo;
-    private TipoServicio tipoServicio;
+	private String nombre;
+	private double tarifaBase;
+	private double precioKm;
+	private double precioMinuto;
+	private TipoVehiculo tipoVehiculo;
+	private CategoriaVehiculo categoriaVehiculo;
+	private TipoServicio tipoServicio;
 
-    /**
-     * Constructor completo para inicializar las tarifas y configuraciones del servicio.
-     */
-    public Servicio(String nombre, double tarifaBase, double precioKm, double precioMinuto,
-                    TipoVehiculo tipoVehiculo, CategoriaVehiculo categoriaVehiculo, TipoServicio tipoServicio) {
-        this.nombre = nombre;
-        this.tarifaBase = tarifaBase;
-        this.precioKm = precioKm;
-        this.precioMinuto = precioMinuto;
-        this.tipoVehiculo = tipoVehiculo;
-        this.categoriaVehiculo = categoriaVehiculo;
-        this.tipoServicio = tipoServicio;
-    }
+	/**
+	 * Constructor completo para inicializar las tarifas y configuraciones del
+	 * servicio.
+	 */
+	public Servicio(String nombre, double tarifaBase, double precioKm, double precioMinuto,
+			TipoVehiculo tipoVehiculo, CategoriaVehiculo categoriaVehiculo, TipoServicio tipoServicio) {
 
-    public String getNombre() {
-        return nombre;
-    }
+		this.nombre = nombre;
+		this.tarifaBase = tarifaBase;
+		this.precioKm = precioKm;
+		this.precioMinuto = precioMinuto;
+		this.tipoVehiculo = tipoVehiculo;
+		this.categoriaVehiculo = categoriaVehiculo;
+		this.tipoServicio = tipoServicio;
+	}
 
-    public void setNombre(String nombre) {
-        this.nombre = nombre;
-    }
+	public String getNombre() {
 
-    public double getTarifaBase() {
-        return tarifaBase;
-    }
+		return nombre;
+	}
 
-    public void setTarifaBase(double tarifaBase) {
-        this.tarifaBase = tarifaBase;
-    }
+	public void setNombre(String nombre) {
 
-    public double getPrecioKm() {
-        return precioKm;
-    }
+		this.nombre = nombre;
+	}
 
-    public void setPrecioKm(double precioKm) {
-        this.precioKm = precioKm;
-    }
+	public double getTarifaBase() {
 
-    public double getPrecioMinuto() {
-        return precioMinuto;
-    }
+		return tarifaBase;
+	}
 
-    public void setPrecioMinuto(double precioMinuto) {
-        this.precioMinuto = precioMinuto;
-    }
+	public void setTarifaBase(double tarifaBase) {
 
-    public TipoVehiculo getTipoVehiculo() {
-        return tipoVehiculo;
-    }
+		this.tarifaBase = tarifaBase;
+	}
 
-    public void setTipoVehiculo(TipoVehiculo tipoVehiculo) {
-        this.tipoVehiculo = tipoVehiculo;
-    }
+	public double getPrecioKm() {
 
-    public CategoriaVehiculo getCategoriaVehiculo() {
-        return categoriaVehiculo;
-    }
+		return precioKm;
+	}
 
-    public void setCategoriaVehiculo(CategoriaVehiculo categoriaVehiculo) {
-        this.categoriaVehiculo = categoriaVehiculo;
-    }
+	public void setPrecioKm(double precioKm) {
 
-    public TipoServicio getTipoServicio() {
-        return tipoServicio;
-    }
+		this.precioKm = precioKm;
+	}
 
-    public void setTipoServicio(TipoServicio tipoServicio) {
-        this.tipoServicio = tipoServicio;
-    }
+	public double getPrecioMinuto() {
 
-    public double calcularCosto(double distanciaKm, double duracionMinutos) {
-        return tarifaBase + (distanciaKm * precioKm) + (duracionMinutos * precioMinuto);
-    }
+		return precioMinuto;
+	}
 
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) {
+	public void setPrecioMinuto(double precioMinuto) {
+
+		this.precioMinuto = precioMinuto;
+	}
+
+	public TipoVehiculo getTipoVehiculo() {
+
+		return tipoVehiculo;
+	}
+
+	public void setTipoVehiculo(TipoVehiculo tipoVehiculo) {
+
+		this.tipoVehiculo = tipoVehiculo;
+	}
+
+	public CategoriaVehiculo getCategoriaVehiculo() {
+
+		return categoriaVehiculo;
+	}
+
+	public void setCategoriaVehiculo(CategoriaVehiculo categoriaVehiculo) {
+
+		this.categoriaVehiculo = categoriaVehiculo;
+	}
+
+	public TipoServicio getTipoServicio() {
+
+		return tipoServicio;
+	}
+
+	public void setTipoServicio(TipoServicio tipoServicio) {
+
+		this.tipoServicio = tipoServicio;
+	}
+
+	public double calcularCosto(double distanciaKm, double duracionMinutos) {
+
+		return tarifaBase + (distanciaKm * precioKm) + (duracionMinutos * precioMinuto);
+	}
+
+	@Override
+	public boolean equals(Object o) {
+
+		if (this == o) {
+
 			return true;
 		}
-        if (o == null || getClass() != o.getClass()) {
+
+		if (o == null || getClass() != o.getClass()) {
+
 			return false;
 		}
-        Servicio servicio = (Servicio) o;
-        return Objects.equals(nombre, servicio.nombre) &&
-               tipoVehiculo == servicio.tipoVehiculo &&
-               categoriaVehiculo == servicio.categoriaVehiculo &&
-               tipoServicio == servicio.tipoServicio;
-    }
+		Servicio servicio = (Servicio) o;
+		return Objects.equals(nombre, servicio.nombre) && tipoVehiculo == servicio.tipoVehiculo
+				&& categoriaVehiculo == servicio.categoriaVehiculo
+				&& tipoServicio == servicio.tipoServicio;
+	}
 
-    @Override
-    public int hashCode() {
-        return Objects.hash(nombre, tipoVehiculo, categoriaVehiculo, tipoServicio);
-    }
+	@Override
+	public int hashCode() {
 
-    @Override
-    public String toString() {
-        return "Servicio{" +
-                "nombre='" + nombre + '\'' +
-                ", tarifaBase=" + tarifaBase +
-                ", precioKm=" + precioKm +
-                ", precioMinuto=" + precioMinuto +
-                ", tipoVehiculo=" + tipoVehiculo +
-                ", categoriaVehiculo=" + categoriaVehiculo +
-                ", tipoServicio=" + tipoServicio +
-                '}';
-    }
+		return Objects.hash(nombre, tipoVehiculo, categoriaVehiculo, tipoServicio);
+	}
+
+	@Override
+	public String toString() {
+
+		return "Servicio{" + "nombre='" + nombre + '\'' + ", tarifaBase=" + tarifaBase + ", precioKm="
+				+ precioKm + ", precioMinuto=" + precioMinuto + ", tipoVehiculo=" + tipoVehiculo
+				+ ", categoriaVehiculo=" + categoriaVehiculo + ", tipoServicio=" + tipoServicio + '}';
+	}
 }

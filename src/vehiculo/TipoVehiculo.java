@@ -6,6 +6,5 @@
 package vehiculo;
 
 public enum TipoVehiculo {
-	AUTO,
-	MOTO
+	AUTO, MOTO
 }

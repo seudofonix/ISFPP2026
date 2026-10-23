@@ -15,100 +15,113 @@ import vehiculo.CategoriaVehiculo;
 import vehiculo.Vehiculo;
 import viajes.Viaje;
 
+
 public class Conductor {
 
-    private String licenciaConducir;
-    private CategoriaVehiculo categoriaVehiculoActivo;
-    private EstadoConductor estadoConductor;
-    private List<Viaje> viajes;
-    private Map<String, Vehiculo> vehiculos;
+	private String licenciaConducir;
+	private CategoriaVehiculo categoriaVehiculoActivo;
+	private EstadoConductor estadoConductor;
+	private List<Viaje> viajes;
+	private Map<String, Vehiculo> vehiculos;
 
-    /**
-     * Crea al conductor e inicializa su registro de viajes y vehiculos.
-     *
-     * @param licenciaConducir licencia unica para cada conductor.
-     */
-    public Conductor(String licenciaConducir) {
-        this.licenciaConducir = licenciaConducir;
-        this.estadoConductor = EstadoConductor.FUERA_DE_SERVICIO;
-        this.categoriaVehiculoActivo = null;
-        this.viajes = new ArrayList<>();
-        this.vehiculos = new HashMap<>();
-    }
+	/**
+	 * Crea al conductor e inicializa su registro de viajes y vehiculos.
+	 *
+	 * @param licenciaConducir licencia unica para cada conductor.
+	 */
+	public Conductor(String licenciaConducir) {
 
-    public String getLicenciaConducir() {
-        return licenciaConducir;
-    }
+		this.licenciaConducir = licenciaConducir;
+		this.estadoConductor = EstadoConductor.FUERA_DE_SERVICIO;
+		this.categoriaVehiculoActivo = null;
+		this.viajes = new ArrayList<>();
+		this.vehiculos = new HashMap<>();
+	}
 
-    public void setLicenciaConducir(String licenciaConducir) {
-        this.licenciaConducir = licenciaConducir;
-    }
+	public String getLicenciaConducir() {
 
-    public CategoriaVehiculo getCategoriaVehiculoActivo() {
-        return categoriaVehiculoActivo;
-    }
+		return licenciaConducir;
+	}
 
-    public void setCategoriaVehiculoActivo(CategoriaVehiculo categoriaVehiculoActivo) {
-        this.categoriaVehiculoActivo = categoriaVehiculoActivo;
-    }
+	public void setLicenciaConducir(String licenciaConducir) {
 
-    public EstadoConductor getEstadoConductor() {
-        return estadoConductor;
-    }
+		this.licenciaConducir = licenciaConducir;
+	}
 
-    public void setEstadoConductor(EstadoConductor estadoConductor) {
-        this.estadoConductor = estadoConductor;
-    }
+	public CategoriaVehiculo getCategoriaVehiculoActivo() {
 
-    public List<Viaje> getViajes() {
-        return new ArrayList<>(viajes);
-    }
+		return categoriaVehiculoActivo;
+	}
 
-    public Map<String, Vehiculo> getVehiculos() {
-        return new HashMap<>(vehiculos);
-    }
+	public void setCategoriaVehiculoActivo(CategoriaVehiculo categoriaVehiculoActivo) {
 
-    /**
-     * Agrega un nuevo vehiculo del conductor a su registro, usando la patente del mismo para identificarlo
-     *
-     * @param vehiculo nuevo vehiculo perteneciente al conductor
-     */
+		this.categoriaVehiculoActivo = categoriaVehiculoActivo;
+	}
 
-    public void agregarVehiculo (Vehiculo vehiculo) {
-        vehiculos.put(vehiculo.getPatente(), vehiculo);
-    }
+	public EstadoConductor getEstadoConductor() {
 
-    /**
-     * Agrega un viaje al registro de viajes del conductor.
-     *
-     * @param viaje ultimo viaje realizado por el conductor a registrar
-     */
-    public void agregarViaje (Viaje viaje) {
-        viajes.add(viaje);
-    }
+		return estadoConductor;
+	}
 
-    @Override
-    public boolean equals(Object o) {
-        if (o == null || getClass() != o.getClass()) {
+	public void setEstadoConductor(EstadoConductor estadoConductor) {
+
+		this.estadoConductor = estadoConductor;
+	}
+
+	public List<Viaje> getViajes() {
+
+		return new ArrayList<>(viajes);
+	}
+
+	public Map<String, Vehiculo> getVehiculos() {
+
+		return new HashMap<>(vehiculos);
+	}
+
+	/**
+	 * Agrega un nuevo vehiculo del conductor a su registro, usando la patente del
+	 * mismo para identificarlo
+	 *
+	 * @param vehiculo nuevo vehiculo perteneciente al conductor
+	 */
+
+	public void agregarVehiculo(Vehiculo vehiculo) {
+
+		vehiculos.put(vehiculo.getPatente(), vehiculo);
+	}
+
+	/**
+	 * Agrega un viaje al registro de viajes del conductor.
+	 *
+	 * @param viaje ultimo viaje realizado por el conductor a registrar
+	 */
+	public void agregarViaje(Viaje viaje) {
+
+		viajes.add(viaje);
+	}
+
+	@Override
+	public boolean equals(Object o) {
+
+		if (o == null || getClass() != o.getClass()) {
+
 			return false;
 		}
-        Conductor conductor = (Conductor) o;
-        return Objects.equals(licenciaConducir, conductor.licenciaConducir);
-    }
+		Conductor conductor = (Conductor) o;
+		return Objects.equals(licenciaConducir, conductor.licenciaConducir);
+	}
 
-    @Override
-    public int hashCode() {
-        return Objects.hashCode(licenciaConducir);
-    }
+	@Override
+	public int hashCode() {
 
-    @Override
-    public String toString() {
-        return "Conductor{" +
-                "licenciaConducir='" + licenciaConducir + '\'' +
-                ", categoriaVehiculoActivo=" + categoriaVehiculoActivo +
-                ", estadoConductor=" + estadoConductor +
-                ", viajes=" + viajes +
-                ", vehiculos=" + vehiculos +
-                '}';
-    }
+		return Objects.hashCode(licenciaConducir);
+	}
+
+	@Override
+	public String toString() {
+
+		return "Conductor{" + "licenciaConducir='" + licenciaConducir + '\'' + ", categoriaVehiculoActivo="
+				+ categoriaVehiculoActivo + ", estadoConductor=" + estadoConductor + ", viajes="
+				+ viajes + ", vehiculos=" + vehiculos + '}';
+	}
 }
