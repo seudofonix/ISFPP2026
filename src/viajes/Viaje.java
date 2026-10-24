@@ -13,6 +13,7 @@ import java.util.UUID;
 
 import servicio.Servicio;
 import ubicacion.Ubicacion;
+import usuario.EstadoConductor;
 import usuario.RolUsuario;
 import usuario.Usuario;
 import usuario.Cliente;
@@ -64,11 +65,11 @@ public class Viaje {
 	 */
 	public Viaje(Usuario cliente, Ubicacion origen, Ubicacion destino, Servicio servicio) {
 
+		this();
 		this.cliente = cliente;
 		this.origen = origen;
 		this.destino = destino;
 		this.servicio = servicio;
-		registroViaje = new ArrayList<RegistroViaje>();
 	}
 
 	/**
@@ -78,9 +79,23 @@ public class Viaje {
 	 */
 	public void solicitar(LocalDateTime fechaHora) {
 
+		if (estadoActual() != null) {
+
+			throw new IllegalStateException("El viaje ya fue solicitado.");
+		}
+
+		if (cliente == null || cliente.getCliente() == null) {
+
+			throw new IllegalStateException("El viaje no tiene un cliente valido.");
+		}
+
+		if (cliente.getCliente().enViaje()) {
+
+			throw new IllegalStateException("El cliente ya se encuentra en un viaje activo.");
+		}
+
 		registroViaje.add(new RegistroViaje(fechaHora, EstadoViaje.SOLICITADO));
 		cliente.getCliente().agregarViaje(this);
-		// TODO:
 	}
 
 	/**
@@ -91,9 +106,40 @@ public class Viaje {
 	 */
 	public void aceptar(LocalDateTime fechaHora, Usuario conductor) {
 
-		this.conductor = conductor;
-		registroViaje.add(new RegistroViaje(fechaHora, EstadoViaje.ACEPTADO));
+		if (estadoActual() != EstadoViaje.SOLICITADO) {
+			throw new IllegalStateException("Solo se puede aceptar un viaje solicitado.");
+		}
 
+		if (conductor == null || conductor.getConductor() == null) {
+			throw new IllegalStateException("El conductor no esta dado de alta.");
+		}
+
+		if (conductor.getConductor().getEstadoConductor() != EstadoConductor.DISPONIBLE) {
+			throw new IllegalStateException("El conductor no esta disponible para aceptar el viaje.");
+		}
+
+		Vehiculo vehiculoAsignado = null;
+
+		for (Vehiculo vehiculoConductor : conductor.getConductor().getVehiculos().values()) {
+			if (vehiculoConductor.getCategoriaVehiculo() != null && servicio != null
+					&& servicio.getCategoriaVehiculo() != null
+					&& vehiculoConductor.getCategoriaVehiculo().ordinal() >= servicio.getCategoriaVehiculo().ordinal()) {
+				vehiculoAsignado = vehiculoConductor;
+				break;
+			}
+		}
+
+		if (vehiculoAsignado == null) {
+			throw new IllegalStateException(
+					"El conductor no tiene un vehiculo que cumpla con la categoria del servicio.");
+		}
+
+		this.conductor = conductor;
+		this.vehiculo = vehiculoAsignado;
+		conductor.getConductor().setCategoriaVehiculoActivo(vehiculoAsignado.getCategoriaVehiculo());
+		conductor.getConductor().agregarViaje(this);
+		conductor.getConductor().setEstadoConductor(EstadoConductor.VIAJE_A_ORIGEN);
+		registroViaje.add(new RegistroViaje(fechaHora, EstadoViaje.ACEPTADO));
 	}
 
 	/**
@@ -103,7 +149,15 @@ public class Viaje {
 	 */
 	public void iniciar(LocalDateTime fechaHora) {
 
+		if (estadoActual() != EstadoViaje.ACEPTADO) {
+			throw new IllegalStateException("Solo se puede iniciar un viaje aceptado.");
+		}
+
 		registroViaje.add(new RegistroViaje(fechaHora, EstadoViaje.INICIADO));
+
+		if (conductor != null && conductor.getConductor() != null) {
+			conductor.getConductor().setEstadoConductor(EstadoConductor.VIAJE_A_DESTINO);
+		}
 	}
 
 	/**
@@ -111,15 +165,23 @@ public class Viaje {
 	 * correspondientes.
 	 *
 	 * @param fechaHora             fecha y hora en que finaliza el viaje
-	 * @param calificacionConductor calificación otorgada al conductor
 	 * @param calificacionCliente   calificación otorgada al cliente
+	 * @param calificacionConductor calificación otorgada al conductor
 	 */
-	public void finalizar(LocalDateTime fechaHora, CalificacionViaje calificacionConductor,
-			CalificacionViaje calificacionCliente) {
+	public void finalizar(LocalDateTime fechaHora, CalificacionViaje calificacionCliente,
+			CalificacionViaje calificacionConductor) {
+
+		if (estadoActual() != EstadoViaje.INICIADO) {
+			throw new IllegalStateException("Solo se puede finalizar un viaje iniciado.");
+		}
 
 		registroViaje.add(new RegistroViaje(fechaHora, EstadoViaje.FINALIZADO));
-		this.calificacionConductor = calificacionConductor;
 		this.calificacionCliente = calificacionCliente;
+		this.calificacionConductor = calificacionConductor;
+
+		if (conductor != null && conductor.getConductor() != null) {
+			conductor.getConductor().setEstadoConductor(EstadoConductor.DISPONIBLE);
+		}
 	}
 
 	/**
@@ -146,18 +208,18 @@ public class Viaje {
 		registroViaje.add(new RegistroViaje(fechaHora, EstadoViaje.CANCELADO));
 		this.motivoCancelacion = motivo;
 
+		if (conductor != null && conductor.getConductor() != null) {
+			conductor.getConductor().setEstadoConductor(EstadoConductor.DISPONIBLE);
+		}
+
 		if (usuario != null) {
-
 			if (usuario.equals(this.cliente)) {
-
 				this.rolCancela = RolUsuario.CLIENTE;
 			}
 			else if (usuario.equals(this.conductor)) {
-
 				this.rolCancela = RolUsuario.CONDUCTOR;
 			}
 			else {
-
 				this.rolCancela = usuario.getRolActivo();
 			}
 		}
@@ -169,6 +231,10 @@ public class Viaje {
 	 * @param fechaHora fecha y hora en que se rechaza el viaje
 	 */
 	public void rechazar(LocalDateTime fechaHora) {
+
+		if (estadoActual() != EstadoViaje.SOLICITADO) {
+			throw new IllegalStateException("Solo se puede rechazar un viaje solicitado.");
+		}
 
 		registroViaje.add(new RegistroViaje(fechaHora, EstadoViaje.RECHAZADO));
 	}

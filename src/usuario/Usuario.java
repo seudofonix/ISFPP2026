@@ -90,7 +90,40 @@ public class Usuario {
 	 */
 	public void cambiarRolActivo(RolUsuario rolNuevo) {
 
-		this.rolActivo = rolNuevo;
+		if (rolNuevo == null) {
+
+			throw new IllegalArgumentException("El rol no puede ser nulo.");
+		}
+
+		if (rolNuevo == RolUsuario.CONDUCTOR) {
+
+			if (this.conductor == null) {
+
+				throw new IllegalStateException("El usuario no esta dado de alta como conductor.");
+			}
+
+			if (this.cliente != null && this.cliente.enViaje()) {
+
+				throw new IllegalStateException("El usuario tiene un viaje activo como cliente.");
+			}
+
+			if (this.conductor.getEstadoConductor() != EstadoConductor.FUERA_DE_SERVICIO) {
+
+				throw new IllegalStateException(
+						"Solo se puede cambiar a conductor si esta fuera de servicio.");
+			}
+
+			this.rolActivo = RolUsuario.CONDUCTOR;
+			this.conductor.setEstadoConductor(EstadoConductor.DISPONIBLE);
+			return;
+		}
+
+		this.rolActivo = RolUsuario.CLIENTE;
+
+		if (this.conductor != null) {
+
+			this.conductor.setEstadoConductor(EstadoConductor.FUERA_DE_SERVICIO);
+		}
 	}
 
 	/**
