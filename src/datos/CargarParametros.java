@@ -17,6 +17,8 @@ public class CargarParametros {
 	private static String archivoUsuarios;
 	private static String archivoServicios;
 	private static String archivoVehiculos;
+	private static String origen = "archivo";
+
 
 	public static void parametros() throws IOException {
 
@@ -40,6 +42,7 @@ public class CargarParametros {
 			archivoUsuarios = properties.getProperty("usuario");
 			archivoServicios = properties.getProperty("servicio");
 			archivoVehiculos = properties.getProperty("vehiculo");
+			origen = properties.getProperty("origen", "archivo").trim().toLowerCase();
 		}
 	}
 
@@ -56,5 +59,8 @@ public class CargarParametros {
 	public static String getArchivoVehiculos() {
 
 		return archivoVehiculos;
+	}
+	public static String getOrigen() {
+		return origen;
 	}
 }
