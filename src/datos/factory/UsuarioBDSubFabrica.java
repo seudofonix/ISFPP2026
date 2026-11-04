@@ -1,8 +1,9 @@
 /**
  * Ignacio Bullon - Joel Erlan Hughes - Santiago Gittardi. ISFPP Programacion Orientada a Objetos 2026
  *
- * Sub-factory de usuarios desde la base de datos. Una fila por usuario y por vehiculo de conductor;
- * si el usuario tiene licencia y al menos un vehiculo conocido, tambien es conductor.
+ * Sub-factory de usuarios desde la base de datos. La licencia esta en usuario.licencia_conducir
+ * (NULL = solo cliente) y los vehiculos de cada conductor en conductor_vehiculo. El primer vehiculo
+ * insertado para un email es el principal, por eso se ordena por orden fisico de insercion (ctid).
  */
 package datos.factory;
 
@@ -16,10 +17,9 @@ import vehiculo.Vehiculo;
 
 public class UsuarioBDSubFabrica implements SubFabrica<HashMap<String, Usuario>> {
 
-	// AJUSTAR a los nombres reales de tablas y columnas
-	static final String CONSULTA = "SELECT u.email, u.nombre, u.telefono, c.licencia_conducir, v.patente "
-			+ "FROM usuario u LEFT JOIN conductor c ON c.email = u.email "
-			+ "LEFT JOIN vehiculo v ON v.email_conductor = c.email " + "ORDER BY u.email, v.patente";
+	static final String CONSULTA = "SELECT u.email, u.nombre, u.telefono, u.licencia_conducir, cv.patente "
+			+ "FROM usuario u LEFT JOIN conductor_vehiculo cv ON cv.email = u.email "
+			+ "ORDER BY u.email, cv.ctid";
 
 	private final Map<String, Vehiculo> vehiculos;
 

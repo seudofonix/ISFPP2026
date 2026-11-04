@@ -1,7 +1,7 @@
 /**
  * Ignacio Bullon - Joel Erlan Hughes - Santiago Gittardi. ISFPP Programacion Orientada a Objetos 2026
  *
- * Sub-factory de servicios desde la base de datos.
+ * Sub-factory de servicios desde la base de datos (tabla servicio: enums como enteros).
  */
 package datos.factory;
 
@@ -16,7 +16,6 @@ import vehiculo.TipoVehiculo;
 
 public class ServicioBDSubFabrica implements SubFabrica<ArrayList<Servicio>> {
 
-	// AJUSTAR a los nombres reales de tablas y columnas
 	static final String CONSULTA = "SELECT nombre, tarifa_base, precio_km, precio_minuto, tipo_vehiculo, "
 			+ "categoria_vehiculo, tipo_servicio FROM servicio ORDER BY nombre";
 
@@ -40,9 +39,11 @@ public class ServicioBDSubFabrica implements SubFabrica<ArrayList<Servicio>> {
 
 				servicios.add(new Servicio(rs.getString("nombre").trim(), rs.getDouble("tarifa_base"),
 						rs.getDouble("precio_km"), rs.getDouble("precio_minuto"),
-						TipoVehiculo.valueOf(rs.getString("tipo_vehiculo").trim()),
-						CategoriaVehiculo.valueOf(rs.getString("categoria_vehiculo").trim()),
-						TipoServicio.valueOf(rs.getString("tipo_servicio").trim())));
+						CodigosBD.enumPorCodigo(TipoVehiculo.values(), rs.getInt("tipo_vehiculo"), "tipo_vehiculo"),
+						CodigosBD.enumPorCodigo(CategoriaVehiculo.values(), rs.getInt("categoria_vehiculo"),
+								"categoria_vehiculo"),
+						CodigosBD.enumPorCodigo(TipoServicio.values(), rs.getInt("tipo_servicio"),
+								"tipo_servicio")));
 			}
 		};
 	}

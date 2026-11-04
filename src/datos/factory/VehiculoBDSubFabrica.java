@@ -1,27 +1,23 @@
 /**
  * Ignacio Bullon - Joel Erlan Hughes - Santiago Gittardi. ISFPP Programacion Orientada a Objetos 2026
  *
- * Sub-factory de vehiculos desde la base de datos. Una fila por vehiculo y por tipo de servicio.
+ * Sub-factory de vehiculos desde la base de datos (tabla vehiculo: enums como enteros y tipo_servicios
+ * como mascara de bits).
  */
 package datos.factory;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.HashMap;
-import java.util.HashSet;
 
-import servicio.TipoServicio;
 import vehiculo.CategoriaVehiculo;
 import vehiculo.TipoVehiculo;
 import vehiculo.Vehiculo;
 
 public class VehiculoBDSubFabrica implements SubFabrica<HashMap<String, Vehiculo>> {
 
-	// AJUSTAR a los nombres reales de tablas y columnas
-	static final String CONSULTA = "SELECT v.patente, v.modelo, v.capacidad_pasajeros, v.tipo_vehiculo, "
-			+ "v.categoria_vehiculo, vs.tipo_servicio "
-			+ "FROM vehiculo v LEFT JOIN vehiculo_servicio vs ON vs.patente = v.patente "
-			+ "ORDER BY v.patente";
+	static final String CONSULTA = "SELECT patente, modelo, capacidad_pasajeros, tipo_vehiculo, "
+			+ "categoria_vehiculo, tipo_servicios FROM vehiculo ORDER BY patente";
 
 	@Override
 	public Lector<HashMap<String, Vehiculo>> crearLector() {
@@ -42,22 +38,14 @@ public class VehiculoBDSubFabrica implements SubFabrica<HashMap<String, Vehiculo
 			protected void procesarFila(ResultSet rs, HashMap<String, Vehiculo> vehiculos) throws SQLException {
 
 				String patente = rs.getString("patente").trim();
-				Vehiculo vehiculo = vehiculos.get(patente);
 
-				if (vehiculo == null) {
-
-					vehiculo = new Vehiculo(patente, rs.getString("modelo").trim(), rs.getInt("capacidad_pasajeros"),
-							TipoVehiculo.valueOf(rs.getString("tipo_vehiculo").trim()),
-							CategoriaVehiculo.valueOf(rs.getString("categoria_vehiculo").trim()), new HashSet<>());
-					vehiculos.put(patente, vehiculo);
-				}
-
-				String servicio = rs.getString("tipo_servicio");
-
-				if (servicio != null && !servicio.isBlank()) {
-
-					vehiculo.agregarTipoServicio(TipoServicio.valueOf(servicio.trim()));
-				}
+				vehiculos.put(patente,
+						new Vehiculo(patente, rs.getString("modelo").trim(), rs.getInt("capacidad_pasajeros"),
+								CodigosBD.enumPorCodigo(TipoVehiculo.values(), rs.getInt("tipo_vehiculo"),
+										"tipo_vehiculo"),
+								CodigosBD.enumPorCodigo(CategoriaVehiculo.values(), rs.getInt("categoria_vehiculo"),
+										"categoria_vehiculo"),
+								CodigosBD.serviciosDesdeMascara(rs.getInt("tipo_servicios"))));
 			}
 		};
 	}

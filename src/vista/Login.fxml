@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.ComboBox?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.RadioButton?>
+<?import javafx.scene.control.ToggleGroup?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
+
+<VBox alignment="CENTER" prefWidth="480.0" spacing="14.0" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" fx:controller="controlador.LoginController">
+   <padding>
+      <Insets bottom="28.0" left="28.0" right="28.0" top="28.0" />
+   </padding>
+   <children>
+      <Label style="-fx-font-size: 22px; -fx-font-weight: bold;" text="Movilidad Digital" />
+      <Label text="¿Como queres ingresar?" />
+      <HBox alignment="CENTER" spacing="24.0">
+         <children>
+            <RadioButton fx:id="rbUsuario" mnemonicParsing="false" selected="true" text="Usuario">
+               <toggleGroup>
+                  <ToggleGroup fx:id="grupoRol" />
+               </toggleGroup>
+            </RadioButton>
+            <RadioButton fx:id="rbConductor" mnemonicParsing="false" text="Conductor" toggleGroup="$grupoRol" />
+         </children>
+      </HBox>
+      <ComboBox fx:id="comboUsuario" prefWidth="420.0" promptText="Elegi un usuario" />
+      <Label fx:id="etiquetaDetalle" wrapText="true" />
+      <HBox alignment="CENTER" spacing="12.0">
+         <children>
+            <Button fx:id="botonIngresar" defaultButton="true" disable="true" mnemonicParsing="false" onAction="#ingresar" text="Ingresar" />
+            <Button fx:id="botonRecargar" mnemonicParsing="false" onAction="#recargar" text="Recargar datos" />
+         </children>
+      </HBox>
+      <Label fx:id="etiquetaEstado" text="Sin datos cargados" wrapText="true" />
+   </children>
+</VBox>

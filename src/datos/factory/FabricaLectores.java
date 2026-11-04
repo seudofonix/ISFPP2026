@@ -22,7 +22,9 @@ public final class FabricaLectores {
 
 	private static boolean usaBD() {
 
-		return "bd".equals(CargarParametros.getOrigen());
+		String origen = CargarParametros.getOrigen();
+
+		return "bd".equals(origen) || "db".equals(origen);
 	}
 
 	public static SubFabrica<HashMap<String, Vehiculo>> vehiculos() {
