@@ -51,7 +51,7 @@ public class CargarParametros {
 			archivoUsuarios = properties.getProperty("usuario");
 			archivoServicios = properties.getProperty("servicio");
 			archivoVehiculos = properties.getProperty("vehiculo");
-			origen = properties.getProperty("origen", "archivo").trim().toLowerCase();
+			origen = normalizarOrigen(properties.getProperty("origen", "archivo"));
 
 			latitud1 = numero(properties, "latitud1", -42.832);
 			latitud2 = numero(properties, "latitud2", -42.704);
@@ -64,6 +64,25 @@ public class CargarParametros {
 
 			throw new IOException("velocidad.media.kmh debe ser mayor que 0 en config.properties");
 		}
+	}
+
+	/** Acepta "archivo" o "bd" (tambien "db"); cualquier otro valor es un error y no se usa otro origen en silencio. */
+	static String normalizarOrigen(String valor) throws IOException {
+
+		String limpio = valor.trim().toLowerCase();
+
+		if (limpio.equals("db")) {
+
+			return "bd";
+		}
+
+		if (!limpio.equals("bd") && !limpio.equals("archivo")) {
+
+			throw new IOException("Valor invalido para 'origen' en config.properties: '" + valor.trim()
+					+ "'. Usar 'bd' (base de datos) o 'archivo'.");
+		}
+
+		return limpio;
 	}
 
 	private static double numero(Properties properties, String clave, double defecto) throws IOException {

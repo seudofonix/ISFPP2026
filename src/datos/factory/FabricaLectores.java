@@ -24,7 +24,7 @@ public final class FabricaLectores {
 
 		String origen = CargarParametros.getOrigen();
 
-		return "bd".equals(origen) || "db".equals(origen);
+		return "bd".equals(origen);
 	}
 
 	public static SubFabrica<HashMap<String, Vehiculo>> vehiculos() {

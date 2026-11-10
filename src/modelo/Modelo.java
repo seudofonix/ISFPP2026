@@ -59,6 +59,12 @@ public class Modelo {
 		return reservas;
 	}
 
+	/** Texto para mostrar de donde se cargaron los datos (segun config.properties). */
+	public String getOrigenDatos() {
+
+		return "bd".equals(CargarParametros.getOrigen()) ? "base de datos PostgreSQL" : "archivos de texto";
+	}
+
 	public Usuario getUsuarioActual() {
 
 		return usuarioActual;

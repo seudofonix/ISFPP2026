@@ -74,12 +74,12 @@ public class LoginController {
 		try {
 
 			modelo.cargar();
-			etiquetaEstado.setText("Datos cargados: " + modelo.getUsuarios().size() + " usuarios, "
+			etiquetaEstado.setText("Datos cargados desde " + modelo.getOrigenDatos() + ": " + modelo.getUsuarios().size() + " usuarios, "
 					+ modelo.getVehiculos().size() + " vehiculos, " + modelo.getServicios().size() + " servicios");
 
 		} catch (IOException | RuntimeException ex) {
 
-			etiquetaEstado.setText("Error al cargar los datos");
+			etiquetaEstado.setText("Error al cargar los datos desde " + modelo.getOrigenDatos());
 			Alertas.error("No se pudieron cargar los datos", ex.getMessage());
 		}
 
