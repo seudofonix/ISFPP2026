@@ -19,8 +19,10 @@ import viajes.Viaje;
 public class Conductor {
 
 	private String licenciaConducir;
-	private CategoriaVehiculo categoriaVehiculoActivo;
-	private EstadoConductor estadoConductor;
+	// Los cambia el hilo del conductor simulado y los lee la pantalla: volatile hace que la
+	// pantalla vea siempre el valor actualizado.
+	private volatile CategoriaVehiculo categoriaVehiculoActivo;
+	private volatile EstadoConductor estadoConductor;
 	private List<Viaje> viajes;
 	private Map<String, Vehiculo> vehiculos;
 

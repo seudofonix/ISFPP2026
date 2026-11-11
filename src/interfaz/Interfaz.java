@@ -14,13 +14,24 @@ import modelo.Modelo;
 
 public class Interfaz extends Application {
 
+	private Modelo modelo;
+
 	@Override
 	public void start(Stage escenario) {
 
-		Modelo modelo = new Modelo();
+		modelo = new Modelo();
 		Navegador navegador = new Navegador(escenario, modelo);
 
 		navegador.mostrarLogin();
 		escenario.show();
+	}
+
+	@Override
+	public void stop() {
+
+		if (modelo != null) {
+
+			modelo.detener(); // cierra los hilos de la simulacion antes de salir
+		}
 	}
 }

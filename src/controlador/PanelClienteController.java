@@ -104,6 +104,8 @@ public class PanelClienteController {
 
 		invalidarCotizacion();
 		actualizarBotonCancelar();
+		// Arranca los conductores simulados que van a tomar los viajes de este panel.
+		modelo.iniciarSimulacion();
 	}
 
 	// ------------------------------------------------------------------ acciones del FXML
