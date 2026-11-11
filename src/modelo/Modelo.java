@@ -17,6 +17,7 @@ import java.util.Random;
 
 import datos.CargarParametros;
 import datos.Datos;
+import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import servicio.Servicio;
@@ -33,6 +34,9 @@ public class Modelo {
 	private final ObservableList<Usuario> usuarios = FXCollections.observableArrayList();
 	private final ObservableList<Servicio> servicios = FXCollections.observableArrayList();
 	private final ObservableList<Viaje> reservas = FXCollections.observableArrayList();
+
+	/** Coordina los viajes con los conductores simulados. */
+	private final GestorViajes gestor = new GestorViajes(this::viajeCambio);
 
 	private final Random azar = new Random();
 
@@ -73,11 +77,13 @@ public class Modelo {
 	// ------------------------------------------------------------------ datos
 
 	/**
-	 * (Re)carga todos los datos segun config.properties (archivos o base de datos). Como se crean objetos
-	 * nuevos, cierra la sesion actual.
+	 * (Re)carga todos los datos segun config.properties (archivos o base de datos). Antes de
+	 * recargar detiene la simulacion y cierra la sesion actual, porque se crean objetos nuevos.
 	 */
 	public void cargar() throws IOException {
 
+		gestor.detener();
+		gestor.limpiar();
 		CargarParametros.parametros();
 
 		HashMap<String, Vehiculo> mapaVehiculos = Datos.cargarVehiculos(CargarParametros.getArchivoVehiculos());
@@ -123,8 +129,10 @@ public class Modelo {
 		reservas.setAll(usuario.getCliente().getViajes());
 	}
 
-	/** Cierra la sesion; un conductor vuelve a quedar fuera de servicio. */
+	/** Cierra la sesion, detiene la simulacion y deja al conductor fuera de servicio. */
 	public void cerrarSesion() {
+
+		gestor.detener();
 
 		if (usuarioActual != null && usuarioActual.getRolActivo() != RolUsuario.CLIENTE) {
 
@@ -133,6 +141,45 @@ public class Modelo {
 
 		usuarioActual = null;
 		reservas.clear();
+	}
+
+	/**
+	 * Arranca la simulacion de conductores para el panel del cliente. Cada conductor simulado es
+	 * un hilo que espera viajes en la cola compartida del GestorViajes.
+	 */
+	public void iniciarSimulacion() {
+
+		gestor.iniciar(conductoresParaSimular());
+	}
+
+	/** Detiene los hilos de simulacion. Se llama al cerrar la aplicacion. */
+	public void detener() {
+
+		gestor.detener();
+	}
+
+	/** Conductores que ya tienen perfil y no son el usuario con la sesion iniciada. */
+	private List<Usuario> conductoresParaSimular() {
+
+		return usuarios.stream().filter(usuario -> usuario.getConductor() != null)
+				.filter(usuario -> !usuario.equals(usuarioActual)).limit(3).toList();
+	}
+
+	/**
+	 * Avisa a la interfaz que un viaje cambio. Como lo llaman los hilos de los conductores, el
+	 * refresco se hace en el hilo de JavaFX con Platform.runLater.
+	 */
+	private void viajeCambio(Viaje viaje) {
+
+		Platform.runLater(() -> {
+
+			int posicion = reservas.indexOf(viaje);
+
+			if (posicion >= 0) {
+
+				reservas.set(posicion, viaje); // fuerza el refresco de la fila
+			}
+		});
 	}
 
 	// ------------------------------------------------------------------ cotizar y reservar
@@ -166,10 +213,11 @@ public class Modelo {
 	}
 
 	/**
-	 * Reserva un viaje para el usuario con sesion de cliente: lo crea y lo solicita (queda SOLICITADO),
-	 * listo para que luego se le asigne conductor y se calcule la ruta.
+	 * Reserva un viaje para el usuario con sesion de cliente: lo crea, lo deja SOLICITADO y lo
+	 * pone en la cola para que lo tome un conductor simulado.
 	 *
-	 * @throws IllegalStateException    si no hay sesion de cliente o ya tiene un viaje activo
+	 * @throws IllegalStateException    si no hay sesion de cliente, ya tiene un viaje activo o no
+	 *                                  hay conductores disponibles
 	 * @throws IllegalArgumentException si los datos no son validos
 	 */
 	public Viaje reservarViaje(Servicio servicio, Ubicacion origen, Ubicacion destino) {
@@ -179,11 +227,24 @@ public class Modelo {
 			throw new IllegalStateException("Para reservar tenes que ingresar como usuario.");
 		}
 
+		if (conductoresParaSimular().isEmpty()) {
+
+			throw new IllegalStateException("No hay conductores disponibles en este momento.");
+		}
+
 		cotizar(servicio, origen, destino);
 
 		Viaje viaje = new Viaje(usuarioActual, origen, destino, servicio);
 		viaje.solicitar(LocalDateTime.now());
 		reservas.add(viaje);
+
+		if (!gestor.solicitar(viaje)) {
+
+			viaje.cancelar(LocalDateTime.now(), usuarioActual, "Sin capacidad");
+			reservas.set(reservas.size() - 1, viaje);
+			throw new IllegalStateException(
+					"El sistema no puede tomar la solicitud en este momento. Intenta de nuevo en unos segundos.");
+		}
 
 		return viaje;
 	}
@@ -200,12 +261,15 @@ public class Modelo {
 			throw new IllegalStateException("La reserva no pertenece al usuario actual.");
 		}
 
-		if (viaje.estadoActual() != EstadoViaje.SOLICITADO) {
+		synchronized (viaje) {
 
-			throw new IllegalStateException("Solo se puede cancelar una reserva en estado SOLICITADO.");
+			if (viaje.estadoActual() != EstadoViaje.SOLICITADO) {
+
+				throw new IllegalStateException("Solo se puede cancelar una reserva en estado SOLICITADO.");
+			}
+
+			viaje.cancelar(LocalDateTime.now(), usuarioActual, "Cancelada por el cliente");
 		}
-
-		viaje.cancelar(LocalDateTime.now(), usuarioActual, "Cancelada por el cliente");
 
 		int posicion = reservas.indexOf(viaje);
 

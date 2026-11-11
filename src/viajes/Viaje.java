@@ -2,6 +2,9 @@
  * Ignacio Bullon - Joel Erlan Hughes - Santiago Gittardi. ISFPP Programacion Orientada a Objetos 2026
  *
  * Define un viaje, sus participantes, ubicaciones, servicio e historial de estados.
+ *
+ * Los metodos que cambian el estado estan sincronizados porque los puede llamar el hilo del
+ * conductor simulado y tambien el hilo de la interfaz.
  */
 package viajes;
 
@@ -77,7 +80,7 @@ public class Viaje {
 	 *
 	 * @param fechaHora fecha y hora en que se solicita el viaje
 	 */
-	public void solicitar(LocalDateTime fechaHora) {
+	public synchronized void solicitar(LocalDateTime fechaHora) {
 
 		if (estadoActual() != null) {
 
@@ -104,7 +107,7 @@ public class Viaje {
 	 * @param fechaHora fecha y hora en que se acepta el viaje
 	 * @param conductor conductor que acepta el viaje
 	 */
-	public void aceptar(LocalDateTime fechaHora, Usuario conductor) {
+	public synchronized void aceptar(LocalDateTime fechaHora, Usuario conductor) {
 
 		if (estadoActual() != EstadoViaje.SOLICITADO) {
 			throw new IllegalStateException("Solo se puede aceptar un viaje solicitado.");
@@ -147,7 +150,7 @@ public class Viaje {
 	 *
 	 * @param fechaHora fecha y hora en que se inicia el viaje
 	 */
-	public void iniciar(LocalDateTime fechaHora) {
+	public synchronized void iniciar(LocalDateTime fechaHora) {
 
 		if (estadoActual() != EstadoViaje.ACEPTADO) {
 			throw new IllegalStateException("Solo se puede iniciar un viaje aceptado.");
@@ -168,7 +171,7 @@ public class Viaje {
 	 * @param calificacionCliente   calificación otorgada al cliente
 	 * @param calificacionConductor calificación otorgada al conductor
 	 */
-	public void finalizar(LocalDateTime fechaHora, CalificacionViaje calificacionCliente,
+	public synchronized void finalizar(LocalDateTime fechaHora, CalificacionViaje calificacionCliente,
 			CalificacionViaje calificacionConductor) {
 
 		if (estadoActual() != EstadoViaje.INICIADO) {
@@ -202,8 +205,17 @@ public class Viaje {
 	 * @param fechaHora fecha y hora en que se cancela el viaje
 	 * @param usuario   usuario que realiza la cancelación
 	 * @param motivo    motivo informado para la cancelación
+	 * @throws IllegalStateException si el viaje ya esta FINALIZADO, CANCELADO o RECHAZADO
 	 */
-	public void cancelar(LocalDateTime fechaHora, Usuario usuario, String motivo) {
+	public synchronized void cancelar(LocalDateTime fechaHora, Usuario usuario, String motivo) {
+
+		EstadoViaje actual = estadoActual();
+
+		if (actual == EstadoViaje.FINALIZADO || actual == EstadoViaje.CANCELADO
+				|| actual == EstadoViaje.RECHAZADO) {
+
+			throw new IllegalStateException("El viaje ya termino y no se puede cancelar.");
+		}
 
 		registroViaje.add(new RegistroViaje(fechaHora, EstadoViaje.CANCELADO));
 		this.motivoCancelacion = motivo;
@@ -230,7 +242,7 @@ public class Viaje {
 	 *
 	 * @param fechaHora fecha y hora en que se rechaza el viaje
 	 */
-	public void rechazar(LocalDateTime fechaHora) {
+	public synchronized void rechazar(LocalDateTime fechaHora) {
 
 		if (estadoActual() != EstadoViaje.SOLICITADO) {
 			throw new IllegalStateException("Solo se puede rechazar un viaje solicitado.");
@@ -244,7 +256,7 @@ public class Viaje {
 	 *
 	 * @return estado actual del viaje, o null si no posee registros
 	 */
-	public EstadoViaje estadoActual() {
+	public synchronized EstadoViaje estadoActual() {
 
 		if (registroViaje == null || registroViaje.isEmpty()) {
 
@@ -263,7 +275,7 @@ public class Viaje {
 		this.id = id;
 	}
 
-	public List<RegistroViaje> getRegistroViaje() {
+	public synchronized List<RegistroViaje> getRegistroViaje() {
 
 		return new ArrayList<>(registroViaje);
 	}
