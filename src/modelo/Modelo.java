@@ -145,11 +145,13 @@ public class Modelo {
 
 	/**
 	 * Arranca la simulacion de conductores para el panel del cliente. Cada conductor simulado es
-	 * un hilo que espera viajes en la cola compartida del GestorViajes.
+	 * un hilo que espera viajes en su propia bandeja.
 	 */
 	public void iniciarSimulacion() {
 
-		gestor.iniciar(conductoresParaSimular());
+		gestor.iniciar(conductoresParaSimular(), new ConfiguracionSimulacion(
+				CargarParametros.getSegundosTramo(), CargarParametros.getPasosTramo(),
+				CargarParametros.getEsperaMaximaSegundos(), CargarParametros.getCapacidadBandeja()));
 	}
 
 	/** Detiene los hilos de simulacion. Se llama al cerrar la aplicacion. */
@@ -162,7 +164,8 @@ public class Modelo {
 	private List<Usuario> conductoresParaSimular() {
 
 		return usuarios.stream().filter(usuario -> usuario.getConductor() != null)
-				.filter(usuario -> !usuario.equals(usuarioActual)).limit(3).toList();
+				.filter(usuario -> !usuario.equals(usuarioActual))
+				.limit(CargarParametros.getMaximoConductores()).toList();
 	}
 
 	/**

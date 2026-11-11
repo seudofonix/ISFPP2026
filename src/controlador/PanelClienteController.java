@@ -9,7 +9,10 @@
 package controlador;
 
 import java.time.format.DateTimeFormatter;
+import java.util.HashSet;
 import java.util.Locale;
+import java.util.Set;
+import java.util.UUID;
 
 import javafx.beans.property.SimpleStringProperty;
 import javafx.fxml.FXML;
@@ -35,6 +38,7 @@ public class PanelClienteController {
 
 	private final Modelo modelo;
 	private final Navegador navegador;
+	private final Set<UUID> rechazosAvisados = new HashSet<>();
 
 	@FXML private Label etiquetaUsuario;
 	@FXML private TabPane pestanias;
@@ -100,7 +104,11 @@ public class PanelClienteController {
 		configurarTablaReservas();
 
 		tablaReservas.getSelectionModel().selectedItemProperty().addListener((obs, a, b) -> actualizarBotonCancelar());
-		modelo.getReservas().addListener((javafx.collections.ListChangeListener<Viaje>) c -> actualizarBotonCancelar());
+		modelo.getReservas().addListener((javafx.collections.ListChangeListener<Viaje>) c -> {
+
+			actualizarBotonCancelar();
+			avisarRechazados();
+		});
 
 		invalidarCotizacion();
 		actualizarBotonCancelar();
@@ -233,6 +241,19 @@ public class PanelClienteController {
 
 		Viaje elegido = tablaReservas.getSelectionModel().getSelectedItem();
 		botonCancelar.setDisable(elegido == null || elegido.estadoActual() != EstadoViaje.SOLICITADO);
+	}
+
+	/** Avisa al cliente cuando un viaje quedo RECHAZADO porque ningun conductor lo acepto a tiempo. */
+	private void avisarRechazados() {
+
+		for (Viaje viaje : modelo.getReservas()) {
+
+			if (viaje.estadoActual() == EstadoViaje.RECHAZADO && rechazosAvisados.add(viaje.getId())) {
+
+				Alertas.info("Viaje rechazado",
+						"Ningun conductor acepto la solicitud a tiempo.\nCodigo: " + codigoCorto(viaje));
+			}
+		}
 	}
 
 	private void configurarTablaReservas() {
