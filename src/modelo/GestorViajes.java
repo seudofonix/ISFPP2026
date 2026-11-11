@@ -1,42 +1,43 @@
 /**
  * Ignacio Bullon - Joel Erlan Hughes - Santiago Gittardi. ISFPP Programacion Orientada a Objetos 2026
  *
- * GESTOR DE VIAJES. El cliente (productor) deja los viajes en una cola compartida. Cada
- * conductor simulado (consumidor) es un hilo que espera, toma un viaje, lo acepta y simula su
- * recorrido. Cuando cambia un viaje, avisa al Modelo para que se refresque la pantalla.
+ * GESTOR DE VIAJES. El cliente (productor) deja una copia del viaje en la bandeja de cada
+ * conductor compatible. Cada conductor simulado (consumidor) es un hilo que espera en su propia
+ * bandeja, toma un viaje, lo acepta y simula su recorrido. El primero que lo acepta gana; si nadie
+ * lo acepta antes del tiempo maximo, el viaje queda RECHAZADO.
  */
 package modelo;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
+import servicio.Servicio;
 import usuario.Conductor;
 import usuario.EstadoConductor;
 import usuario.Usuario;
+import vehiculo.Vehiculo;
 import viajes.CalificacionViaje;
 import viajes.EstadoViaje;
 import viajes.Viaje;
 
 public class GestorViajes {
 
-	private static final int CAPACIDAD_COLA = 50;
-	private static final int PASOS_POR_TRAMO = 10;
-	private static final int MAX_INTENTOS = 10;
-	private static final long ESPERA_DEVOLUCION_MS = 300;
-	private static final double SEGUNDOS_TRAMO = 4.0;
+	private static final long ESPERA_CIERRE_MS = 5000;
 
-	private final BlockingQueue<Viaje> solicitudes = new LinkedBlockingQueue<>(CAPACIDAD_COLA);
-	private final Map<Viaje, Integer> intentos = new ConcurrentHashMap<>();
+	private final List<Bandeja> bandejas = new ArrayList<>();
 	private final List<Thread> hilos = new ArrayList<>();
 	private final List<Usuario> conductoresActivos = new ArrayList<>();
 	private final Consumer<Viaje> alCambiar;
 
+	private ScheduledExecutorService expirador;
+	private ConfiguracionSimulacion configuracion;
 	private volatile boolean activo;
 
 	/**
@@ -48,15 +49,22 @@ public class GestorViajes {
 	}
 
 	/**
-	 * Arranca un hilo por conductor simulado. Si no hay conductores, no arranca nada.
+	 * Arranca un hilo por conductor simulado. Cada conductor recibe su propia bandeja y todos los
+	 * conductores compatibles reciben una copia del mismo viaje; el primero que lo acepta gana.
 	 *
 	 * @param conductores usuarios que ya tienen un perfil de conductor
+	 * @param configuracion tiempos, capacidad y maximo de conductores de la simulacion
 	 */
-	public void iniciar(List<Usuario> conductores) {
+	public void iniciar(List<Usuario> conductores, ConfiguracionSimulacion configuracion) {
 
 		if (activo) {
 
 			return;
+		}
+
+		if (conductores == null || configuracion == null) {
+
+			throw new IllegalArgumentException("Faltan los conductores o la configuracion de la simulacion.");
 		}
 
 		List<Usuario> validos = conductores.stream().filter(usuario -> usuario.getConductor() != null).toList();
@@ -66,14 +74,23 @@ public class GestorViajes {
 			return;
 		}
 
+		this.configuracion = configuracion;
+		expirador = Executors.newSingleThreadScheduledExecutor(tarea -> {
+
+			Thread hilo = new Thread(tarea, "expirador-viajes");
+			hilo.setDaemon(true);
+			return hilo;
+		});
 		activo = true;
 
 		for (Usuario usuario : validos) {
 
 			usuario.getConductor().setEstadoConductor(EstadoConductor.DISPONIBLE);
+			Bandeja bandeja = new Bandeja(usuario, configuracion.capacidadBandeja());
+			bandejas.add(bandeja);
 			conductoresActivos.add(usuario);
 
-			Thread hilo = new Thread(() -> atender(usuario), "conductor-" + usuario.getNombre());
+			Thread hilo = new Thread(() -> atender(bandeja), "conductor-" + usuario.getNombre());
 			hilo.setDaemon(true);
 			hilos.add(hilo);
 			hilo.start();
@@ -81,128 +98,94 @@ public class GestorViajes {
 	}
 
 	/**
-	 * Productor: deja un viaje en la cola compartida. Lo llama el hilo de JavaFX.
+	 * Productor: ofrece el viaje a todos los conductores compatibles. Si ninguno lo puede tomar,
+	 * el viaje queda esperando y el temporizador lo rechaza cuando se cumple el tiempo maximo.
 	 *
 	 * @param viaje viaje recien solicitado
-	 * @return false si la cola esta llena
+	 * @return false solo si todas las bandejas compatibles estan llenas
 	 */
 	public boolean solicitar(Viaje viaje) {
 
-		return solicitudes.offer(viaje);
+		if (viaje == null) {
+
+			throw new IllegalArgumentException("El viaje no puede ser nulo.");
+		}
+
+		if (bandejas.isEmpty()) {
+
+			// La simulacion no esta iniciada (por ejemplo, en pruebas del Modelo).
+			return true;
+		}
+
+		boolean hayCompatible = false;
+		boolean encolado = false;
+
+		for (Bandeja bandeja : bandejas) {
+
+			if (esCompatible(bandeja.conductor, viaje)) {
+
+				hayCompatible = true;
+				encolado |= bandeja.viajes.offer(viaje);
+			}
+		}
+
+		if (hayCompatible && !encolado) {
+
+			return false;
+		}
+
+		programarExpiracion(viaje);
+
+		return true;
 	}
 
 	/**
-	 * Consumidor: cada conductor espera su proximo viaje, lo acepta y simula su ciclo de vida.
+	 * Consumidor: espera un viaje en su bandeja, lo acepta y simula su ciclo de vida.
 	 *
-	 * @param usuario conductor que atiende la cola
+	 * @param bandeja bandeja del conductor que atiende este hilo
 	 */
-	private void atender(Usuario usuario) {
+	private void atender(Bandeja bandeja) {
 
 		while (activo) {
 
+			Viaje viaje = null;
+
 			try {
 
-				Viaje viaje = solicitudes.take();
+				viaje = bandeja.viajes.take();
 
 				if (viaje.estadoActual() != EstadoViaje.SOLICITADO) {
 
-					intentos.remove(viaje);
 					continue;
 				}
 
-				Conductor conductor = usuario.getConductor();
-
-				if (conductor == null || conductor.getEstadoConductor() != EstadoConductor.DISPONIBLE) {
-
-					devolver(viaje);
-					continue;
-				}
-
-				try {
-
-					viaje.aceptar(LocalDateTime.now(), usuario);
-
-				} catch (IllegalStateException ex) {
-
-					// No es compatible (por ejemplo, por la categoria del vehiculo) o el viaje ya no esta SOLICITADO.
-					devolver(viaje);
-					continue;
-				}
-
-				intentos.remove(viaje);
+				viaje.aceptar(LocalDateTime.now(), bandeja.conductor);
+				quitarDeBandejas(viaje);
 				avisar(viaje);
-
-				try {
-
-					simular(viaje);
-
-				} finally {
-
-					EstadoViaje estado = viaje.estadoActual();
-
-					if (!activo && (estado == EstadoViaje.ACEPTADO || estado == EstadoViaje.INICIADO)) {
-
-						viaje.cancelar(LocalDateTime.now(), null, "Simulacion detenida");
-						avisar(viaje);
-					}
-				}
+				simular(viaje);
 
 			} catch (InterruptedException ex) {
 
 				Thread.currentThread().interrupt();
 				return;
+
+			} catch (IllegalStateException ex) {
+
+				// Otro conductor lo acepto primero o el viaje ya no se puede aceptar.
+
+			} catch (RuntimeException ex) {
+
+				// Un error inesperado no debe matar al conductor ni dejar el viaje colgado.
+				System.err.println("Error en la simulacion del viaje: " + ex.getMessage());
+				cancelarPorError(viaje, bandeja.conductor);
+
+			} finally {
+
+				if (!activo) {
+
+					cancelarSiSigueEnCurso(viaje, bandeja.conductor);
+				}
 			}
-		}
-	}
-
-	/**
-	 * Devuelve el viaje a la cola para que lo intente otro conductor. Cuenta los intentos: cuando
-	 * se agotan, el viaje queda RECHAZADO. La pausa evita que el mismo conductor lo tome
-	 * inmediatamente en un bucle.
-	 */
-	private void devolver(Viaje viaje) throws InterruptedException {
-
-		if (viaje.estadoActual() != EstadoViaje.SOLICITADO) {
-
-			intentos.remove(viaje);
-			return;
-		}
-
-		int numero = intentos.merge(viaje, 1, Integer::sum);
-
-		if (numero >= MAX_INTENTOS) {
-
-			rechazar(viaje);
-			return;
-		}
-
-		if (!solicitudes.offer(viaje)) {
-
-			rechazar(viaje);
-			return;
-		}
-		Thread.sleep(ESPERA_DEVOLUCION_MS);
-	}
-
-	/**
-	 * Marca el viaje como RECHAZADO cuando ningun conductor puede tomarlo. Se usa cuando se
-	 * agotan los intentos o cuando la cola esta llena.
-	 */
-	private void rechazar(Viaje viaje) {
-
-		intentos.remove(viaje);
-
-		try {
-
-			if (viaje.estadoActual() == EstadoViaje.SOLICITADO) {
-
-				viaje.rechazar(LocalDateTime.now());
-				avisar(viaje);
-			}
-
-		} catch (IllegalStateException ex) {
-
-			// El cliente u otro hilo lo cancelo antes.
 		}
 	}
 
@@ -243,15 +226,12 @@ public class GestorViajes {
 		avisar(viaje);
 	}
 
-	/**
-	 * Duerme el tramo en varios pasos, pero corta si el viaje dejo el estado esperado o si el hilo
-	 * fue interrumpido.
-	 *
-	 * @return true si el viaje siguio en el estado esperado durante todo el tramo
-	 */
 	private boolean avanzar(Viaje viaje, EstadoViaje esperado) {
 
-		for (int paso = 1; paso <= PASOS_POR_TRAMO; paso++) {
+		long pasoMs = Math.max(1,
+				(long) (configuracion.segundosTramo() * 1000 / configuracion.pasosTramo()));
+
+		for (int paso = 1; paso <= configuracion.pasosTramo(); paso++) {
 
 			if (viaje.estadoActual() != esperado) {
 
@@ -260,7 +240,7 @@ public class GestorViajes {
 
 			try {
 
-				Thread.sleep((long) (SEGUNDOS_TRAMO * 1000 / PASOS_POR_TRAMO));
+				Thread.sleep(pasoMs);
 
 			} catch (InterruptedException ex) {
 
@@ -269,6 +249,264 @@ public class GestorViajes {
 			}
 		}
 		return true;
+	}
+
+	/** Un conductor solo recibe viajes de una categoria igual o mayor y del tipo de servicio pedido. */
+	private boolean esCompatible(Usuario usuario, Viaje viaje) {
+
+		Conductor conductor = usuario.getConductor();
+
+		if (conductor == null || conductor.getEstadoConductor() == EstadoConductor.FUERA_DE_SERVICIO) {
+
+			return false;
+		}
+
+		Servicio servicio = viaje.getServicio();
+
+		if (servicio == null) {
+
+			return true;
+		}
+
+		for (Vehiculo vehiculo : conductor.getVehiculos().values()) {
+
+			if (vehiculo.getCategoriaVehiculo() != null && servicio.getCategoriaVehiculo() != null
+					&& vehiculo.getCategoriaVehiculo().ordinal() >= servicio.getCategoriaVehiculo().ordinal()
+					&& (servicio.getTipoServicio() == null
+							|| vehiculo.getTipoServicio().contains(servicio.getTipoServicio()))) {
+
+				return true;
+			}
+		}
+		return false;
+	}
+
+	/** Deja programado el rechazo del viaje para cuando se cumpla el tiempo maximo de espera. */
+	private void programarExpiracion(Viaje viaje) {
+
+		ScheduledExecutorService ejecutor = expirador;
+
+		if (ejecutor == null || ejecutor.isShutdown() || configuracion == null) {
+
+			return;
+		}
+
+		long esperaMs = (long) (configuracion.esperaMaximaSegundos() * 1000);
+		ejecutor.schedule(() -> expirar(viaje), esperaMs, TimeUnit.MILLISECONDS);
+	}
+
+	/** Rechaza el viaje si todavia nadie lo acepto cuando se cumple el tiempo maximo. */
+	private void expirar(Viaje viaje) {
+
+		boolean rechazado = false;
+
+		synchronized (viaje) {
+
+			if (viaje.estadoActual() == EstadoViaje.SOLICITADO) {
+
+				try {
+
+					viaje.rechazar(LocalDateTime.now());
+					rechazado = true;
+
+				} catch (IllegalStateException ex) {
+
+					// Otro hilo lo acepto justo antes.
+				}
+			}
+		}
+
+		if (rechazado) {
+
+			quitarDeBandejas(viaje);
+			avisar(viaje);
+		}
+	}
+
+	/**
+	 * Detiene los hilos, cancela los viajes que quedaron en curso o pendientes y devuelve los
+	 * conductores simulados a fuera de servicio.
+	 */
+	public void detener() {
+
+		activo = false;
+
+		if (expirador != null) {
+
+			expirador.shutdownNow();
+
+			try {
+
+				expirador.awaitTermination(ESPERA_CIERRE_MS, TimeUnit.MILLISECONDS);
+
+			} catch (InterruptedException ex) {
+
+				Thread.currentThread().interrupt();
+			}
+			expirador = null;
+		}
+
+		for (Thread hilo : hilos) {
+
+			hilo.interrupt();
+		}
+		for (Thread hilo : hilos) {
+
+			esperarHilo(hilo);
+		}
+		hilos.clear();
+
+		cancelarPendientes();
+		bandejas.clear();
+
+		for (Usuario usuario : conductoresActivos) {
+
+			if (usuario.getConductor() != null) {
+
+				usuario.getConductor().setEstadoConductor(EstadoConductor.FUERA_DE_SERVICIO);
+			}
+		}
+		conductoresActivos.clear();
+		configuracion = null;
+	}
+
+	/**
+	 * Espera a que el hilo termine, pero no para siempre: si un conductor no responde en unos
+	 * segundos, se avisa por consola y se sigue cerrando la aplicacion.
+	 */
+	private void esperarHilo(Thread hilo) {
+
+		try {
+
+			hilo.join(ESPERA_CIERRE_MS);
+
+		} catch (InterruptedException ex) {
+
+			Thread.currentThread().interrupt();
+			return;
+		}
+
+		if (hilo.isAlive()) {
+
+			System.err.println("El hilo " + hilo.getName() + " no termino a tiempo.");
+		}
+	}
+
+	/** Cancela los viajes que quedaron esperando en las bandejas al detener la simulacion. */
+	private void cancelarPendientes() {
+
+		for (Bandeja bandeja : List.copyOf(bandejas)) {
+
+			Viaje pendiente;
+
+			while ((pendiente = bandeja.viajes.poll()) != null) {
+
+				cancelarPendiente(pendiente);
+			}
+		}
+	}
+
+	private void cancelarPendiente(Viaje viaje) {
+
+		boolean cancelado = false;
+
+		synchronized (viaje) {
+
+			if (viaje.estadoActual() == EstadoViaje.SOLICITADO) {
+
+				try {
+
+					viaje.cancelar(LocalDateTime.now(), null, "Simulacion detenida");
+					cancelado = true;
+
+				} catch (IllegalStateException ex) {
+
+					// Ya lo habia cancelado otro hilo.
+				}
+			}
+		}
+
+		if (cancelado) {
+
+			avisar(viaje);
+		}
+	}
+
+	/** Si el conductor habia aceptado el viaje, lo cancela porque se detuvo la simulacion. */
+	private void cancelarSiSigueEnCurso(Viaje viaje, Usuario conductor) {
+
+		if (viaje == null || viaje.getConductor() == null || !viaje.getConductor().equals(conductor)) {
+
+			return;
+		}
+
+		boolean cancelado = false;
+
+		synchronized (viaje) {
+
+			EstadoViaje estado = viaje.estadoActual();
+
+			if (estado == EstadoViaje.ACEPTADO || estado == EstadoViaje.INICIADO) {
+
+				try {
+
+					viaje.cancelar(LocalDateTime.now(), null, "Simulacion detenida");
+					cancelado = true;
+
+				} catch (IllegalStateException ex) {
+
+					// Ya lo habia cancelado otro hilo.
+				}
+			}
+		}
+
+		if (cancelado) {
+
+			avisar(viaje);
+		}
+	}
+
+	/** Cancela el viaje si un error inesperado corto su simulacion. */
+	private void cancelarPorError(Viaje viaje, Usuario conductor) {
+
+		if (viaje == null || viaje.getConductor() == null || !viaje.getConductor().equals(conductor)) {
+
+			return;
+		}
+
+		boolean cancelado = false;
+
+		synchronized (viaje) {
+
+			EstadoViaje estado = viaje.estadoActual();
+
+			if (estado == EstadoViaje.ACEPTADO || estado == EstadoViaje.INICIADO) {
+
+				try {
+
+					viaje.cancelar(LocalDateTime.now(), null, "Error en la simulacion");
+					cancelado = true;
+
+				} catch (IllegalStateException ex) {
+
+					// Ya lo habia cancelado otro hilo.
+				}
+			}
+		}
+
+		if (cancelado) {
+
+			avisar(viaje);
+		}
+	}
+
+	/** Saca el viaje de las bandejas de los conductores que todavia no lo tomaron. */
+	private void quitarDeBandejas(Viaje viaje) {
+
+		for (Bandeja bandeja : List.copyOf(bandejas)) {
+
+			bandeja.viajes.remove(viaje);
+		}
 	}
 
 	/** Avisa al Modelo que cambio un viaje, sin cortar el hilo del conductor si la pantalla falla. */
@@ -284,92 +522,25 @@ public class GestorViajes {
 		}
 	}
 
-	/**
-	 * Detiene los hilos, cancela los viajes que quedaron en curso o pendientes y devuelve los
-	 * conductores simulados a fuera de servicio.
-	 */
-	public void detener() {
-
-		activo = false;
-		for (Thread hilo : hilos) {
-
-			hilo.interrupt();
-		}
-		for (Thread hilo : hilos) {
-
-			esperarHilo(hilo);
-		}
-		hilos.clear();
-
-		cancelarPendientes();
-		intentos.clear();
-
-		for (Usuario usuario : conductoresActivos) {
-
-			if (usuario.getConductor() != null) {
-
-				usuario.getConductor().setEstadoConductor(EstadoConductor.FUERA_DE_SERVICIO);
-			}
-		}
-		conductoresActivos.clear();
-	}
-
-	/**
-	 * Espera a que el hilo termine, aunque interrumpan al hilo actual. No usa un tiempo maximo de
-	 * espera porque los hilos de los conductores solo esperan en take() o sleep(), y se pueden
-	 * despertar con interrupt().
-	 */
-	private void esperarHilo(Thread hilo) {
-
-		boolean interrumpido = false;
-
-		while (hilo.isAlive()) {
-
-			try {
-
-				hilo.join();
-
-			} catch (InterruptedException ex) {
-
-				interrumpido = true;
-			}
-		}
-
-		if (interrumpido) {
-
-			Thread.currentThread().interrupt();
-		}
-	}
-
-	/** Cancela los viajes que quedaron esperando en la cola al detener la simulacion. */
-	private void cancelarPendientes() {
-
-		Viaje pendiente;
-
-		while ((pendiente = solicitudes.poll()) != null) {
-
-			try {
-
-				if (pendiente.estadoActual() == EstadoViaje.SOLICITADO) {
-
-					pendiente.cancelar(LocalDateTime.now(), null, "Simulacion detenida");
-					avisar(pendiente);
-				}
-
-			} catch (IllegalStateException ex) {
-
-				// Ya lo habia cancelado otro hilo.
-			}
-			intentos.remove(pendiente);
-		}
-	}
-
-	/**
-	 * Descarta las solicitudes pendientes. Se usa cuando se recargan los datos desde archivo o base.
-	 */
+	/** Descarta las solicitudes pendientes. Se usa cuando se recargan los datos desde archivo o base. */
 	public void limpiar() {
 
-		solicitudes.clear();
-		intentos.clear();
+		for (Bandeja bandeja : List.copyOf(bandejas)) {
+
+			bandeja.viajes.clear();
+		}
+	}
+
+	/** Bandeja de viajes de un conductor simulado. Cada hilo tiene la suya. */
+	private static final class Bandeja {
+
+		private final Usuario conductor;
+		private final BlockingQueue<Viaje> viajes;
+
+		private Bandeja(Usuario conductor, int capacidad) {
+
+			this.conductor = conductor;
+			this.viajes = new LinkedBlockingQueue<>(capacidad);
+		}
 	}
 }

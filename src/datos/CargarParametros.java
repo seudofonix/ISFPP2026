@@ -2,8 +2,9 @@
  * Ignacio Bullon - Joel Erlan Hughes - Santiago Gittardi. ISFPP Programacion Orientada a Objetos 2026
  *
  * Carga desde config.properties las rutas de los archivos de datos, el origen de los datos
- * (archivo | bd) y los parametros de la simulacion (area geografica y velocidad media). Las claves
- * de la simulacion son opcionales: si faltan se usan los valores de Puerto Madryn.
+ * (archivo | bd) y los parametros de la simulacion (area geografica, velocidad media, tiempos de
+ * los viajes y cantidad de conductores). Las claves de la simulacion son opcionales: si faltan se
+ * usan los valores por defecto del proyecto.
  */
 package datos;
 
@@ -25,6 +26,12 @@ public class CargarParametros {
 	private static double longitud1 = -65.126;
 	private static double longitud2 = -65.005;
 	private static double velocidadMediaKmh = 40.0;
+
+	private static double segundosTramo = 4.0;
+	private static int pasosTramo = 10;
+	private static double esperaMaximaSegundos = 60.0;
+	private static int capacidadBandeja = 50;
+	private static int maximoConductores = 3;
 
 	public static void parametros() throws IOException {
 
@@ -58,11 +65,23 @@ public class CargarParametros {
 			longitud1 = numero(properties, "longitud1", -65.126);
 			longitud2 = numero(properties, "longitud2", -65.005);
 			velocidadMediaKmh = numero(properties, "velocidad.media.kmh", 40.0);
+
+			segundosTramo = numero(properties, "simulacion.segundos.tramo", 4.0);
+			pasosTramo = entero(properties, "simulacion.pasos.tramo", 10);
+			esperaMaximaSegundos = numero(properties, "simulacion.espera.maxima.segundos", 60.0);
+			capacidadBandeja = entero(properties, "simulacion.capacidad.cola", 50);
+			maximoConductores = entero(properties, "simulacion.maximo.conductores", 3);
 		}
 
 		if (velocidadMediaKmh <= 0) {
 
 			throw new IOException("velocidad.media.kmh debe ser mayor que 0 en config.properties");
+		}
+
+		if (segundosTramo <= 0 || pasosTramo <= 0 || esperaMaximaSegundos <= 0 || capacidadBandeja <= 0
+				|| maximoConductores <= 0) {
+
+			throw new IOException("Los parametros de simulacion de config.properties deben ser mayores que 0.");
 		}
 	}
 
@@ -97,6 +116,25 @@ public class CargarParametros {
 		try {
 
 			return Double.parseDouble(valor.trim());
+
+		} catch (NumberFormatException e) {
+
+			throw new IOException("Valor invalido para '" + clave + "' en config.properties: " + valor);
+		}
+	}
+
+	private static int entero(Properties properties, String clave, int defecto) throws IOException {
+
+		String valor = properties.getProperty(clave);
+
+		if (valor == null || valor.isBlank()) {
+
+			return defecto;
+		}
+
+		try {
+
+			return Integer.parseInt(valor.trim());
 
 		} catch (NumberFormatException e) {
 
@@ -149,5 +187,35 @@ public class CargarParametros {
 	public static double getVelocidadMediaKmh() {
 
 		return velocidadMediaKmh;
+	}
+
+	/** Duracion real de cada tramo de la simulacion. */
+	public static double getSegundosTramo() {
+
+		return segundosTramo;
+	}
+
+	/** Cantidad de pasos en que se divide cada tramo de la simulacion. */
+	public static int getPasosTramo() {
+
+		return pasosTramo;
+	}
+
+	/** Tiempo maximo que un viaje puede esperar a que un conductor lo acepte. */
+	public static double getEsperaMaximaSegundos() {
+
+		return esperaMaximaSegundos;
+	}
+
+	/** Capacidad de la bandeja de cada conductor simulado. */
+	public static int getCapacidadBandeja() {
+
+		return capacidadBandeja;
+	}
+
+	/** Cantidad maxima de conductores que se simulan a la vez. */
+	public static int getMaximoConductores() {
+
+		return maximoConductores;
 	}
 }

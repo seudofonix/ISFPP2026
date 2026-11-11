@@ -3,6 +3,7 @@ package test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.time.LocalDateTime;
@@ -14,6 +15,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import modelo.ConfiguracionSimulacion;
 import modelo.GestorViajes;
 import servicio.Servicio;
 import servicio.TipoServicio;
@@ -28,13 +30,17 @@ import viajes.EstadoViaje;
 import viajes.Viaje;
 
 /**
- * Pruebas del GestorViajes: asignación de viajes a conductores simulados, simulación del ciclo de
- * vida, rechazo cuando nadie puede tomar el viaje y apagado limpio.
+ * Pruebas del GestorViajes: asignación a todos los conductores compatibles, simulación del ciclo
+ * de vida, expiración por tiempo y apagado limpio.
  *
- * Los viajes simulados duran unos 8 segundos (4 por tramo), por eso las esperas usan un tiempo
- * máximo generoso en lugar de dormir una cantidad fija.
+ * Los tiempos de la simulación se pasan en la configuración, así las pruebas no esperan los 8
+ * segundos de la aplicación real.
  */
 class GestorViajesTest {
+
+	private static final ConfiguracionSimulacion RAPIDA = new ConfiguracionSimulacion(0.2, 10, 2.0, 50);
+	private static final ConfiguracionSimulacion LENTA = new ConfiguracionSimulacion(30.0, 10, 60.0, 50);
+	private static final ConfiguracionSimulacion EXPIRA_RAPIDO = new ConfiguracionSimulacion(0.2, 10, 0.5, 50);
 
 	private GestorViajes gestor;
 	private final List<EstadoViaje> avisos = new CopyOnWriteArrayList<>();
@@ -72,12 +78,12 @@ class GestorViajesTest {
 		Usuario cliente = crearCliente("Cliente Uno");
 		Usuario conductor = crearConductor("Ana", CategoriaVehiculo.ESTANDAR);
 
-		gestor.iniciar(List.of(conductor));
+		gestor.iniciar(List.of(conductor), RAPIDA);
 
 		Viaje viaje = crearViajeSolicitado(cliente, servicioEstandar);
 		assertTrue(gestor.solicitar(viaje), "El gestor debería aceptar la solicitud.");
 
-		assertTrue(esperarEstado(viaje, EstadoViaje.FINALIZADO, 20_000),
+		assertTrue(esperarEstado(viaje, EstadoViaje.FINALIZADO, 5_000),
 				"El viaje no llegó a FINALIZADO.");
 
 		assertEquals(conductor, viaje.getConductor(), "El viaje debe quedar asignado al conductor.");
@@ -89,113 +95,134 @@ class GestorViajesTest {
 	}
 
 	@Test
-	@DisplayName("2. Un conductor con vehículo de categoría menor no se queda con el viaje")
-	void elViajeLoTerminaElConductorCompatible() throws InterruptedException {
+	@DisplayName("2. El viaje se ofrece a todos los compatibles y lo toma uno solo")
+	void ofreceElViajeATodosLosConductoresCompatibles() throws InterruptedException {
 
 		Usuario cliente = crearCliente("Cliente Dos");
-		Usuario basico = crearConductor("Beto", CategoriaVehiculo.ESTANDAR);
+		Usuario ana = crearConductor("Ana", CategoriaVehiculo.ESTANDAR);
+		Usuario beto = crearConductor("Beto", CategoriaVehiculo.ESTANDAR);
+
+		gestor.iniciar(List.of(ana, beto), RAPIDA);
+
+		Viaje viaje = crearViajeSolicitado(cliente, servicioEstandar);
+		assertTrue(gestor.solicitar(viaje));
+
+		assertTrue(esperarEstado(viaje, EstadoViaje.ACEPTADO, 5_000),
+				"El viaje debería ser aceptado por uno de los dos conductores.");
+
+		Usuario ganador = viaje.getConductor();
+		Usuario perdedor = ganador.equals(ana) ? beto : ana;
+
+		assertTrue(ganador.equals(ana) || ganador.equals(beto), "El viaje debe quedar en un conductor.");
+		assertTrue(ganador.getConductor().getViajes().contains(viaje),
+				"El ganador debe tener el viaje en su registro.");
+		assertTrue(perdedor.getConductor().getViajes().isEmpty(),
+				"El otro conductor no debe quedarse con una copia del viaje.");
+	}
+
+	@Test
+	@DisplayName("3. Un vehículo de categoría menor no recibe un viaje PREMIUM")
+	void elViajeLoTerminaElConductorDeCategoriaCompatible() throws InterruptedException {
+
+		Usuario cliente = crearCliente("Cliente Tres");
+		Usuario basico = crearConductor("Bruno", CategoriaVehiculo.ESTANDAR);
 		Usuario premium = crearConductor("Pia", CategoriaVehiculo.PREMIUM);
 
-		gestor.iniciar(List.of(basico, premium));
+		gestor.iniciar(List.of(basico, premium), RAPIDA);
 
 		Viaje viaje = crearViajeSolicitado(cliente, servicioPremium);
 		assertTrue(gestor.solicitar(viaje));
 
-		assertTrue(esperarEstado(viaje, EstadoViaje.ACEPTADO, 10_000),
-				"El viaje debería ser aceptado por el conductor con vehículo PREMIUM.");
+		assertTrue(esperarEstado(viaje, EstadoViaje.ACEPTADO, 5_000),
+				"El viaje debería ser aceptado por el conductor PREMIUM.");
 		assertEquals(premium, viaje.getConductor(),
 				"El conductor con vehículo ESTANDAR no puede cubrir un servicio PREMIUM.");
 	}
 
 	@Test
-	@DisplayName("3. Si ningún conductor es compatible el viaje queda RECHAZADO")
-	void rechazaElViajeCuandoNadiePuedeTomarlo() throws InterruptedException {
-
-		Usuario cliente = crearCliente("Cliente Tres");
-		Usuario basico = crearConductor("Bruno", CategoriaVehiculo.ESTANDAR);
-
-		gestor.iniciar(List.of(basico));
-
-		Viaje viaje = crearViajeSolicitado(cliente, servicioPremium);
-		assertTrue(gestor.solicitar(viaje));
-
-		assertTrue(esperarEstado(viaje, EstadoViaje.RECHAZADO, 15_000),
-				"El viaje no debería quedar rebotando para siempre.");
-		assertNull(viaje.getConductor(), "Ningún conductor debe quedar asignado.");
-		assertEquals(EstadoConductor.DISPONIBLE, basico.getConductor().getEstadoConductor(),
-				"El conductor incompatible debe seguir disponible.");
-	}
-
-	@Test
-	@DisplayName("4. Detener cancela el viaje en curso y libera al conductor")
-	void detenerCancelaElViajeEnCurso() throws InterruptedException {
+	@DisplayName("4. Un vehículo de otro tipo de servicio no recibe el viaje")
+	void noOfreceElViajeAUnConductorDeOtroTipoDeServicio() throws InterruptedException {
 
 		Usuario cliente = crearCliente("Cliente Cuatro");
-		Usuario conductor = crearConductor("Carla", CategoriaVehiculo.ESTANDAR);
+		Usuario envios = crearConductor("Enzo", CategoriaVehiculo.ESTANDAR, TipoServicio.ENVIOS);
 
-		gestor.iniciar(List.of(conductor));
-
-		Viaje viaje = crearViajeSolicitado(cliente, servicioEstandar);
-		assertTrue(gestor.solicitar(viaje));
-		assertTrue(esperarEstado(viaje, EstadoViaje.ACEPTADO, 10_000),
-				"El conductor debería aceptar el viaje.");
-
-		gestor.detener();
-
-		assertEquals(EstadoViaje.CANCELADO, viaje.estadoActual(),
-				"El viaje en curso debe quedar cancelado al detener la simulación.");
-		assertEquals("Simulacion detenida", viaje.getMotivoCancelacion());
-		assertEquals(EstadoConductor.FUERA_DE_SERVICIO, conductor.getConductor().getEstadoConductor());
-		assertFalse(cliente.getCliente().enViaje(), "El cliente debe quedar libre.");
-	}
-
-	@Test
-	@DisplayName("5. Detener cancela los viajes que quedaron esperando en la cola")
-	void detenerCancelaLosViajesPendientes() {
-
-		Usuario cliente = crearCliente("Cliente Cinco");
-		Viaje viaje = crearViajeSolicitado(cliente, servicioEstandar);
-		assertTrue(gestor.solicitar(viaje));
-
-		gestor.detener();
-
-		assertEquals(EstadoViaje.CANCELADO, viaje.estadoActual(),
-				"Un viaje pendiente no debe sobrevivir al apagado.");
-		assertEquals("Simulacion detenida", viaje.getMotivoCancelacion());
-	}
-
-	@Test
-	@DisplayName("6. Un usuario sin perfil de conductor no atiende viajes")
-	void noUsaUsuariosSinPerfilDeConductor() throws InterruptedException {
-
-		Usuario cliente = crearCliente("Cliente Seis");
-		Usuario pasajero = crearCliente("Pasajero");
-
-		gestor.iniciar(List.of(pasajero));
+		gestor.iniciar(List.of(envios), EXPIRA_RAPIDO);
 
 		Viaje viaje = crearViajeSolicitado(cliente, servicioEstandar);
 		assertTrue(gestor.solicitar(viaje));
 
-		Thread.sleep(500);
-
-		assertEquals(EstadoViaje.SOLICITADO, viaje.estadoActual(),
-				"Nadie debería haber tomado el viaje.");
+		assertTrue(esperarEstado(viaje, EstadoViaje.RECHAZADO, 5_000),
+				"El viaje no debería asignarse a un vehículo de ENVIOS.");
 		assertNull(viaje.getConductor());
 	}
 
 	@Test
-	@DisplayName("7. La cola rechaza la solicitud cuando está llena")
-	void noAceptaMasDeCincuentaViajesEnCola() {
+	@DisplayName("5. Si nadie lo acepta a tiempo, el viaje queda RECHAZADO")
+	void rechazaElViajeSiNadieLoAceptaEnElTiempoMaximo() throws InterruptedException {
 
-		for (int i = 1; i <= 50; i++) {
+		Usuario cliente = crearCliente("Cliente Cinco");
+		Usuario basico = crearConductor("Bruno", CategoriaVehiculo.ESTANDAR);
 
-			Viaje viaje = crearViajeSolicitado(crearCliente("Cliente Cola " + i), servicioEstandar);
-			assertTrue(gestor.solicitar(viaje), "Debería aceptar el viaje número " + i + ".");
-		}
+		gestor.iniciar(List.of(basico), EXPIRA_RAPIDO);
 
-		Viaje sobrante = crearViajeSolicitado(crearCliente("Cliente Cola 51"), servicioEstandar);
+		Viaje viaje = crearViajeSolicitado(cliente, servicioPremium);
+		assertTrue(gestor.solicitar(viaje));
 
-		assertFalse(gestor.solicitar(sobrante), "La solicitud 51 no entra en la cola.");
+		assertTrue(esperarEstado(viaje, EstadoViaje.RECHAZADO, 5_000),
+				"El viaje debería rechazarse al cumplirse el tiempo máximo.");
+		assertTrue(avisos.contains(EstadoViaje.RECHAZADO), "El cliente debe recibir el aviso de rechazo.");
+		assertNull(viaje.getConductor());
+		assertEquals(EstadoConductor.DISPONIBLE, basico.getConductor().getEstadoConductor());
+	}
+
+	@Test
+	@DisplayName("6. Detener cancela el viaje en curso y los pendientes")
+	void detenerCancelaElViajeEnCursoYLosPendientes() throws InterruptedException {
+
+		Usuario cliente = crearCliente("Cliente Seis");
+		Usuario conductor = crearConductor("Carla", CategoriaVehiculo.ESTANDAR);
+
+		gestor.iniciar(List.of(conductor), LENTA);
+
+		Viaje enCurso = crearViajeSolicitado(cliente, servicioEstandar);
+		assertTrue(gestor.solicitar(enCurso));
+		assertTrue(esperarEstado(enCurso, EstadoViaje.ACEPTADO, 5_000));
+
+		Usuario otroCliente = crearCliente("Cliente Seis Bis");
+		Viaje pendiente = crearViajeSolicitado(otroCliente, servicioEstandar);
+		assertTrue(gestor.solicitar(pendiente));
+
+		gestor.detener();
+
+		assertEquals(EstadoViaje.CANCELADO, enCurso.estadoActual());
+		assertEquals(EstadoViaje.CANCELADO, pendiente.estadoActual());
+		assertEquals("Simulacion detenida", enCurso.getMotivoCancelacion());
+		assertEquals("Simulacion detenida", pendiente.getMotivoCancelacion());
+		assertEquals(EstadoConductor.FUERA_DE_SERVICIO, conductor.getConductor().getEstadoConductor());
+	}
+
+	@Test
+	@DisplayName("7. La bandeja de un conductor rechaza solicitudes cuando está llena")
+	void noAceptaMasViajesQueLaCapacidadDeLaBandeja() throws InterruptedException {
+
+		ConfiguracionSimulacion chica = new ConfiguracionSimulacion(30.0, 10, 60.0, 2);
+
+		Usuario cliente = crearCliente("Cliente Siete");
+		Usuario conductor = crearConductor("Diego", CategoriaVehiculo.ESTANDAR);
+
+		gestor.iniciar(List.of(conductor), chica);
+
+		Viaje enCurso = crearViajeSolicitado(cliente, servicioEstandar);
+		assertTrue(gestor.solicitar(enCurso));
+		assertTrue(esperarEstado(enCurso, EstadoViaje.ACEPTADO, 5_000));
+
+		Viaje primero = crearViajeSolicitado(crearCliente("Cliente Siete A"), servicioEstandar);
+		Viaje segundo = crearViajeSolicitado(crearCliente("Cliente Siete B"), servicioEstandar);
+		Viaje sobrante = crearViajeSolicitado(crearCliente("Cliente Siete C"), servicioEstandar);
+
+		assertTrue(gestor.solicitar(primero));
+		assertTrue(gestor.solicitar(segundo));
+		assertFalse(gestor.solicitar(sobrante), "La bandeja llena debe rechazar la solicitud.");
 	}
 
 	@Test
@@ -208,14 +235,14 @@ class GestorViajesTest {
 		});
 
 		Usuario cliente = crearCliente("Cliente Ocho");
-		Usuario conductor = crearConductor("Diego", CategoriaVehiculo.ESTANDAR);
+		Usuario conductor = crearConductor("Elsa", CategoriaVehiculo.ESTANDAR);
 
-		gestor.iniciar(List.of(conductor));
+		gestor.iniciar(List.of(conductor), RAPIDA);
 
 		Viaje viaje = crearViajeSolicitado(cliente, servicioEstandar);
 		assertTrue(gestor.solicitar(viaje));
 
-		assertTrue(esperarEstado(viaje, EstadoViaje.INICIADO, 10_000),
+		assertTrue(esperarEstado(viaje, EstadoViaje.INICIADO, 5_000),
 				"El hilo del conductor no debería morir porque falle el aviso a la pantalla.");
 	}
 
@@ -224,20 +251,32 @@ class GestorViajesTest {
 	void noAsignaUnViajeQueYaFueCancelado() throws InterruptedException {
 
 		Usuario cliente = crearCliente("Cliente Nueve");
-		Usuario conductor = crearConductor("Elsa", CategoriaVehiculo.ESTANDAR);
+		Usuario conductor = crearConductor("Fabi", CategoriaVehiculo.ESTANDAR);
 
-		Viaje viaje = crearViajeSolicitado(cliente, servicioEstandar);
-		viaje.cancelar(LocalDateTime.now(), cliente, "El plan cambió");
-		assertTrue(gestor.solicitar(viaje));
+		gestor.iniciar(List.of(conductor), LENTA);
 
-		gestor.iniciar(List.of(conductor));
+		Viaje enCurso = crearViajeSolicitado(cliente, servicioEstandar);
+		assertTrue(gestor.solicitar(enCurso));
+		assertTrue(esperarEstado(enCurso, EstadoViaje.ACEPTADO, 5_000));
 
-		Thread.sleep(500);
+		Usuario otroCliente = crearCliente("Cliente Nueve Bis");
+		Viaje cancelado = crearViajeSolicitado(otroCliente, servicioEstandar);
+		assertTrue(gestor.solicitar(cancelado));
+		cancelado.cancelar(LocalDateTime.now(), otroCliente, "El plan cambió");
 
-		assertEquals(EstadoViaje.CANCELADO, viaje.estadoActual(),
-				"El conductor no debe revivir un viaje cancelado.");
-		assertNull(viaje.getConductor());
-		assertEquals(EstadoConductor.DISPONIBLE, conductor.getConductor().getEstadoConductor());
+		gestor.detener();
+
+		assertEquals(EstadoViaje.CANCELADO, cancelado.estadoActual());
+		assertEquals("El plan cambió", cancelado.getMotivoCancelacion(),
+				"El apagado no debe pisar el motivo de una cancelación del cliente.");
+		assertNull(cancelado.getConductor());
+	}
+
+	@Test
+	@DisplayName("10. No se puede encolar un viaje nulo")
+	void noAceptaUnViajeNulo() {
+
+		assertThrows(IllegalArgumentException.class, () -> gestor.solicitar(null));
 	}
 
 	// ---------------------------------------------------------------------------------------------
@@ -251,10 +290,14 @@ class GestorViajesTest {
 
 	private Usuario crearConductor(String nombre, CategoriaVehiculo categoria) {
 
+		return crearConductor(nombre, categoria, TipoServicio.PASAJEROS);
+	}
+
+	private Usuario crearConductor(String nombre, CategoriaVehiculo categoria, TipoServicio tipoServicio) {
+
 		Usuario usuario = new Usuario(nombre, "tel-" + nombre, nombre + "@x.com");
 		usuario.altaConductor("LIC-" + nombre,
-				new Vehiculo("PAT-" + nombre, "Auto", 4, TipoVehiculo.AUTO, categoria,
-						TipoServicio.PASAJEROS));
+				new Vehiculo("PAT-" + nombre, "Auto", 4, TipoVehiculo.AUTO, categoria, tipoServicio));
 		usuario.cambiarRolActivo(RolUsuario.CONDUCTOR);
 
 		return usuario;
