@@ -273,4 +273,20 @@ public class PanelClienteController {
 
 		return String.format(Locale.ROOT, "%.5f, %.5f", u.getLatitud(), u.getLongitud());
 	}
+	public void inicializarMapa() {
+	    WebEngine webEngine = webViewMapa.getEngine();
+	    
+	    webEngine.setJavaScriptEnabled(true);
+	    
+	    PuenteSeleccionMapa puente = new PuenteSeleccionMapa(this);
+	    webEngine.getLoadWorker().stateProperty().addListener((obs, oldState, newState) -> {
+	        if (newState == Worker.State.SUCCEEDED) {
+	            netscape.javascript.JSObject window = (netscape.javascript.JSObject) webEngine.executeScript("window");
+	            window.setMember("javaBridge", puente);
+	        }
+	    });
+	    
+	    // Cargar el archivo mapa.html local
+	    webEngine.load(getClass().getResource("/html/mapa.html").toExternalForm());
+	}
 }

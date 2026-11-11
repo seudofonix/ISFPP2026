@@ -1,4 +1,6 @@
-
+/*
+ * CONTROLADOR del panel de login
+ */
 package controlador;
 
 import java.io.IOException;

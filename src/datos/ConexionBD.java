@@ -1,3 +1,6 @@
+/*
+ * Archivo para setear la conexion con la base de datos
+ */
 package datos;
 
 import java.io.File;
