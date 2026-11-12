@@ -107,9 +107,23 @@ public class CargarParametros {
 		}
 	}
 
-	private static int entero(Properties properties, String string, int i) {
-		// TODO Auto-generated method stub
-		return 0;
+	private static int entero(Properties properties, String clave, int defecto) throws IOException {
+
+	    String valor = properties.getProperty(clave);
+
+	    if (valor == null || valor.isBlank()) {
+
+	        return defecto;
+	    }
+
+	    try {
+
+	        return Integer.parseInt(valor.trim());
+
+	    } catch (NumberFormatException e) {
+
+	        throw new IOException("Valor invalido para '" + clave + "' en config.properties: " + valor);
+	    }
 	}
 
 	/** Acepta "archivo" o "bd" (tambien "db"); cualquier otro valor es un error y no se usa otro origen en silencio. */
