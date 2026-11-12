@@ -9,6 +9,8 @@ import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
 
+import ubicacion.Ubicacion;
+
 import servicio.TipoServicio;
 
 
@@ -21,6 +23,7 @@ public class Vehiculo {
 
 	private CategoriaVehiculo categoriaVehiculo;
 	private TipoVehiculo tipoVehiculo;
+	private Ubicacion ubicacion; // posicion actual del vehiculo (sobre una calle), null si no se asigno
 	private Set<TipoServicio> tipoServicio; // Un vehiculo puede ser de ambos tipos al mismo tiempo.
 
 	/**
@@ -65,6 +68,14 @@ public class Vehiculo {
 	}
 	
 	
+
+	public Ubicacion getUbicacion() {
+		return ubicacion;
+	}
+
+	public void setUbicacion(Ubicacion ubicacion) {
+		this.ubicacion = ubicacion;
+	}
 
 	public String getPatente() {
 

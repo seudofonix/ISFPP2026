@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Mapa - Movilidad Digital</title>
+<link rel="stylesheet" href="leaflet/leaflet.css">
+<style>
+  html, body { height: 100%; margin: 0; font-family: sans-serif; }
+  #mapa { height: 100%; width: 100%; }
+  #indicacion { position: absolute; z-index: 1000; top: 10px; left: 50px; background: #fff8d6; border: 1px solid #c9b458;
+                border-radius: 4px; padding: 4px 10px; font-size: 13px; display: none; }
+  #fondo { position: absolute; z-index: 1000; bottom: 22px; left: 8px; background: rgba(255,255,255,.9); border-radius: 4px;
+           padding: 4px 8px; font-size: 12px; }
+  #fondo button { font-size: 12px; margin-left: 6px; }
+</style>
+</head>
+<body>
+<div id="mapa"></div>
+<div id="indicacion"></div>
+<div id="fondo"><span id="estadoTeselas">Cargando fondo...</span><button id="reintentarTeselas" type="button">Reintentar fondo</button></div>
+
+<script src="leaflet/leaflet.js"></script>
+<script>
+  // Colores de la capa de presentacion (el controlador Java no los conoce)
+  const COLOR_ACERCAMIENTO = '#1763c0';   // conductor -> origen
+  const COLOR_TRASLADO     = '#149566';   // origen -> destino
+  const COLOR_CONDUCTOR    = '#1763c0';
+  const COLOR_ORIGEN       = '#149566';
+  const COLOR_DESTINO      = '#c0392b';
+
+  const mapa = L.map('mapa').setView([-42.785, -65.070], 12);
+
+  // Fondo: imagenes (teselas) del servidor publico de OpenStreetMap. Las rutas y marcadores son capas aparte.
+  const base = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19,
+    attribution: '&copy; OpenStreetMap contributors'
+  }).addTo(mapa);
+
+  const rutasDibujadas = L.layerGroup().addTo(mapa);
+  const seleccionDibujada = L.layerGroup().addTo(mapa);
+  const marcadoresSeleccion = {};
+  let modoSeleccion = null;
+
+  const indicacion = document.getElementById('indicacion');
+  const estadoTeselas = document.getElementById('estadoTeselas');
+  let teselasFallidas = 0;
+  let ultimoReintento = 0;
+
+  function marca(punto, color, texto) {
+    return L.circleMarker(punto, { radius: 9, color: '#22313f', weight: 2, fillColor: color, fillOpacity: 0.95 })
+      .bindTooltip(texto);
+  }
+
+  function mostrarIndicacion(texto) {
+    indicacion.textContent = texto || '';
+    indicacion.style.display = texto ? 'block' : 'none';
+  }
+
+  // ---- fondo: deteccion de errores y reintento manual (con espera de 12 s entre intentos)
+  base.on('tileerror', function () {
+    teselasFallidas++;
+    estadoTeselas.textContent = 'No se pudieron cargar ' + teselasFallidas + ' imagenes del fondo (la ruta no se ve afectada).';
+  });
+  base.on('load', function () {
+    if (teselasFallidas === 0) { estadoTeselas.textContent = 'Fondo actualizado.'; }
+  });
+  document.getElementById('reintentarTeselas').addEventListener('click', function () {
+    const espera = 12000 - (Date.now() - ultimoReintento);
+    if (espera > 0) { estadoTeselas.textContent = 'Esperar ' + Math.ceil(espera / 1000) + ' s para reintentar.'; return; }
+    ultimoReintento = Date.now();
+    teselasFallidas = 0;
+    mapa.invalidateSize({ pan: false });
+    base.redraw();
+  });
+
+  // ---- vuelta: JavaScript -> Java (el puente javaBridge lo publica el visualizador Java)
+  mapa.on('click', function (evento) {
+    if (!modoSeleccion || !window.javaBridge) { return; }
+    const tipo = modoSeleccion;
+    modoSeleccion = null;                       // cancela la espera de este clic; Java decide si pide otro
+    mostrarIndicacion('');
+    mapa.getContainer().style.cursor = '';
+    window.javaBridge.seleccionarPunto(tipo, evento.latlng.lat, evento.latlng.lng);
+  });
+
+  // ---- ida: Java -> JavaScript (window.* se invoca con WebEngine.executeScript)
+  window.configurarVistaInicial = function (latitud, longitud, zoom) {
+    mapa.setView([latitud, longitud], zoom);
+  };
+
+  window.activarSeleccion = function (tipo) {
+    modoSeleccion = tipo;
+    mostrarIndicacion('Hace clic en el mapa para elegir el ' + tipo);
+    mapa.getContainer().style.cursor = 'crosshair';
+  };
+
+  window.cancelarSeleccion = function () {
+    modoSeleccion = null;
+    mostrarIndicacion('');
+    mapa.getContainer().style.cursor = '';
+  };
+
+  window.mostrarMarcadorSeleccion = function (tipo, punto) {
+    if (marcadoresSeleccion[tipo]) { seleccionDibujada.removeLayer(marcadoresSeleccion[tipo]); }
+    const esOrigen = tipo === 'origen';
+    marcadoresSeleccion[tipo] = marca(punto, esOrigen ? COLOR_ORIGEN : COLOR_DESTINO, esOrigen ? 'Origen' : 'Destino')
+      .addTo(seleccionDibujada);
+  };
+
+  window.limpiarSeleccion = function () {
+    seleccionDibujada.clearLayers();
+    delete marcadoresSeleccion.origen;
+    delete marcadoresSeleccion.destino;
+  };
+
+  window.limpiarRutas = function () {
+    rutasDibujadas.clearLayers();
+  };
+
+  window.mostrarRutas = function (datos) {
+    rutasDibujadas.clearLayers();
+    const acercamiento = L.polyline(datos.acercamiento, { color: COLOR_ACERCAMIENTO, weight: 5 }).addTo(rutasDibujadas);
+    const traslado = L.polyline(datos.traslado, { color: COLOR_TRASLADO, weight: 5 }).addTo(rutasDibujadas);
+    marca(datos.conductor, COLOR_CONDUCTOR, 'Conductor').addTo(rutasDibujadas);
+    marca(datos.origen, COLOR_ORIGEN, 'Origen').addTo(rutasDibujadas);
+    marca(datos.destino, COLOR_DESTINO, 'Destino').addTo(rutasDibujadas);
+    mapa.fitBounds(L.featureGroup([acercamiento, traslado]).getBounds(), { paddingTopLeft: [30, 30], paddingBottomRight: [30, 70] });
+  };
+
+  // ---- ajuste automatico del tamano al panel JavaFX (no vuelve a pedir teselas)
+  window.refrescarTamano = function () { mapa.invalidateSize({ pan: false }); };
+  if (window.ResizeObserver) { new ResizeObserver(window.refrescarTamano).observe(document.getElementById('mapa')); }
+  setTimeout(window.refrescarTamano, 300);
+  setTimeout(window.refrescarTamano, 1000);
+</script>
+</body>
+</html>

@@ -6,11 +6,13 @@
 package usuario;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
+import servicio.Servicio;
 import vehiculo.CategoriaVehiculo;
 import vehiculo.Vehiculo;
 import viajes.Viaje;
@@ -86,6 +88,41 @@ public class Conductor {
 	 *
 	 * @param vehiculo nuevo vehiculo perteneciente al conductor
 	 */
+
+	/**
+	 * Vehiculo del conductor que puede prestar el servicio: mismo tipo de vehiculo, categoria igual o superior y
+	 * habilitado para ese tipo de servicio. Si hay varios, el de menor categoria (desempata por patente).
+	 *
+	 * @return el vehiculo, o null si ninguno es compatible
+	 */
+	public Vehiculo vehiculoCompatible(Servicio servicio) {
+
+		if (servicio == null) {
+
+			return null;
+		}
+
+		return vehiculos.values().stream().filter(v -> esCompatible(v, servicio))
+				.min(Comparator.comparingInt((Vehiculo v) -> v.getCategoriaVehiculo().ordinal())
+						.thenComparing(Vehiculo::getPatente))
+				.orElse(null);
+	}
+
+	private boolean esCompatible(Vehiculo vehiculo, Servicio servicio) {
+
+		if (vehiculo.getCategoriaVehiculo() == null || servicio.getCategoriaVehiculo() == null) {
+
+			return false;
+		}
+
+		boolean mismoTipo = servicio.getTipoVehiculo() == null || vehiculo.getTipoVehiculo() == servicio.getTipoVehiculo();
+		boolean categoriaSuficiente = vehiculo.getCategoriaVehiculo().ordinal() >= servicio.getCategoriaVehiculo()
+				.ordinal();
+		boolean habilitado = servicio.getTipoServicio() == null || vehiculo.getTipoServicio() == null
+				|| vehiculo.getTipoServicio().contains(servicio.getTipoServicio());
+
+		return mismoTipo && categoriaSuficiente && habilitado;
+	}
 
 	public void agregarVehiculo(Vehiculo vehiculo) {
 

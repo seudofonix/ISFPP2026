@@ -121,22 +121,11 @@ public class Viaje {
 			throw new IllegalStateException("El conductor no esta disponible para aceptar el viaje.");
 		}
 
-		Vehiculo vehiculoAsignado = null;
-
-		for (Vehiculo vehiculoConductor : conductor.getConductor().getVehiculos().values()) {
-			if (vehiculoConductor.getCategoriaVehiculo() != null && servicio != null
-					&& servicio.getCategoriaVehiculo() != null
-					&& vehiculoConductor.getCategoriaVehiculo().ordinal() >= servicio.getCategoriaVehiculo().ordinal()
-					&& (servicio.getTipoServicio() == null
-							|| vehiculoConductor.getTipoServicio().contains(servicio.getTipoServicio()))) {
-				vehiculoAsignado = vehiculoConductor;
-				break;
-			}
-		}
+		Vehiculo vehiculoAsignado = conductor.getConductor().vehiculoCompatible(servicio);
 
 		if (vehiculoAsignado == null) {
 			throw new IllegalStateException(
-					"El conductor no tiene un vehiculo que cumpla con la categoria y el tipo de servicio.");
+					"El conductor no tiene un vehiculo compatible con el servicio (tipo, categoria y tipo de servicio).");
 		}
 
 		this.conductor = conductor;

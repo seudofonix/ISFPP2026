@@ -1,10 +1,10 @@
 /**
  * Ignacio Bullon - Joel Erlan Hughes - Santiago Gittardi. ISFPP Programacion Orientada a Objetos 2026
  *
- * Carga desde config.properties las rutas de los archivos de datos, el origen de los datos
- * (archivo | bd) y los parametros de la simulacion (area geografica, velocidad media, tiempos de
- * los viajes y cantidad de conductores). Las claves de la simulacion son opcionales: si faltan se
- * usan los valores por defecto del proyecto.
+ * Carga desde config.properties la configuracion de la aplicacion: origen de los datos (bd | archivo), rutas
+ * de los archivos de texto, area de simulacion, velocidad media, motor de rutas y datos del mapa. Las claves
+ * opcionales tienen un valor por defecto (el caso de Puerto Madryn), asi la configuracion geografica vive
+ * en este archivo y no dentro de los controladores ni del JavaScript.
  */
 package datos;
 
@@ -21,17 +21,28 @@ public class CargarParametros {
 	private static String archivoVehiculos;
 	private static String origen = "archivo";
 
+	// Area de simulacion y estimacion de tiempos
 	private static double latitud1 = -42.832;
 	private static double latitud2 = -42.704;
 	private static double longitud1 = -65.126;
 	private static double longitud2 = -65.005;
 	private static double velocidadMediaKmh = 40.0;
-
+	private static double toleranciaAjusteMetros = 200.0;
 	private static double segundosTramo = 4.0;
 	private static int pasosTramo = 10;
 	private static double esperaMaximaSegundos = 60.0;
 	private static int capacidadBandeja = 50;
 	private static int maximoConductores = 3;
+	// Motor de rutas
+	private static String rutasMotor = "graphhopper";
+	private static String rutasOsm = "mapas/puerto_madryn_ampliado.osm";
+	private static String rutasCache = "mapas/graphhopper-cache-madryn-ampliado";
+
+	// Mapa
+	private static String ciudadNombre = "Puerto Madryn";
+	private static double mapaCentroLatitud = -42.785;
+	private static double mapaCentroLongitud = -65.070;
+	private static int mapaZoom = 12;
 
 	public static void parametros() throws IOException {
 
@@ -54,35 +65,51 @@ public class CargarParametros {
 		try (InputStream in = entrada) {
 
 			properties.load(in);
-
-			archivoUsuarios = properties.getProperty("usuario");
-			archivoServicios = properties.getProperty("servicio");
-			archivoVehiculos = properties.getProperty("vehiculo");
-			origen = normalizarOrigen(properties.getProperty("origen", "archivo"));
-
-			latitud1 = numero(properties, "latitud1", -42.832);
-			latitud2 = numero(properties, "latitud2", -42.704);
-			longitud1 = numero(properties, "longitud1", -65.126);
-			longitud2 = numero(properties, "longitud2", -65.005);
-			velocidadMediaKmh = numero(properties, "velocidad.media.kmh", 40.0);
-
-			segundosTramo = numero(properties, "simulacion.segundos.tramo", 4.0);
-			pasosTramo = entero(properties, "simulacion.pasos.tramo", 10);
-			esperaMaximaSegundos = numero(properties, "simulacion.espera.maxima.segundos", 60.0);
-			capacidadBandeja = entero(properties, "simulacion.capacidad.cola", 50);
-			maximoConductores = entero(properties, "simulacion.maximo.conductores", 3);
 		}
 
+		archivoUsuarios = properties.getProperty("usuario");
+		archivoServicios = properties.getProperty("servicio");
+		archivoVehiculos = properties.getProperty("vehiculo");
+		origen = normalizarOrigen(properties.getProperty("origen", "archivo"));
+
+		latitud1 = numero(properties, "latitud1", -42.832);
+		latitud2 = numero(properties, "latitud2", -42.704);
+		longitud1 = numero(properties, "longitud1", -65.126);
+		longitud2 = numero(properties, "longitud2", -65.005);
+		velocidadMediaKmh = numero(properties, "velocidad.media.kmh", 40.0);
+		segundosTramo = numero(properties, "simulacion.segundos.tramo", 4.0);
+		pasosTramo = entero(properties, "simulacion.pasos.tramo", 10);
+		esperaMaximaSegundos = numero(properties, "simulacion.espera.maxima.segundos", 60.0);
+		capacidadBandeja = entero(properties, "simulacion.capacidad.cola", 50);
+		maximoConductores = entero(properties, "simulacion.maximo.conductores", 3);
+		toleranciaAjusteMetros = numero(properties, "ajuste.tolerancia.metros", 200.0);
+
+		rutasMotor = texto(properties, "rutas.motor", "graphhopper").toLowerCase();
+		rutasOsm = texto(properties, "rutas.osm", "mapas/puerto_madryn_ampliado.osm");
+		rutasCache = texto(properties, "rutas.cache", "mapas/graphhopper-cache-madryn-ampliado");
+
+		ciudadNombre = texto(properties, "ciudad.nombre", "Puerto Madryn");
+		mapaCentroLatitud = numero(properties, "mapa.centro.latitud", -42.785);
+		mapaCentroLongitud = numero(properties, "mapa.centro.longitud", -65.070);
+		mapaZoom = (int) numero(properties, "mapa.zoom", 12);
+		if (segundosTramo <= 0 || pasosTramo <= 0 || esperaMaximaSegundos <= 0
+		        || capacidadBandeja <= 0 || maximoConductores <= 0) {
+		    throw new IOException("Los parametros de simulacion de config.properties deben ser mayores que 0.");
+		}
 		if (velocidadMediaKmh <= 0) {
 
 			throw new IOException("velocidad.media.kmh debe ser mayor que 0 en config.properties");
 		}
 
-		if (segundosTramo <= 0 || pasosTramo <= 0 || esperaMaximaSegundos <= 0 || capacidadBandeja <= 0
-				|| maximoConductores <= 0) {
+		if (toleranciaAjusteMetros <= 0) {
 
-			throw new IOException("Los parametros de simulacion de config.properties deben ser mayores que 0.");
+			throw new IOException("ajuste.tolerancia.metros debe ser mayor que 0 en config.properties");
 		}
+	}
+
+	private static int entero(Properties properties, String string, int i) {
+		// TODO Auto-generated method stub
+		return 0;
 	}
 
 	/** Acepta "archivo" o "bd" (tambien "db"); cualquier otro valor es un error y no se usa otro origen en silencio. */
@@ -123,23 +150,11 @@ public class CargarParametros {
 		}
 	}
 
-	private static int entero(Properties properties, String clave, int defecto) throws IOException {
+	private static String texto(Properties properties, String clave, String defecto) {
 
 		String valor = properties.getProperty(clave);
 
-		if (valor == null || valor.isBlank()) {
-
-			return defecto;
-		}
-
-		try {
-
-			return Integer.parseInt(valor.trim());
-
-		} catch (NumberFormatException e) {
-
-			throw new IOException("Valor invalido para '" + clave + "' en config.properties: " + valor);
-		}
+		return valor == null || valor.isBlank() ? defecto : valor.trim();
 	}
 
 	public static String getArchivoUsuarios() {
@@ -189,33 +204,49 @@ public class CargarParametros {
 		return velocidadMediaKmh;
 	}
 
-	/** Duracion real de cada tramo de la simulacion. */
-	public static double getSegundosTramo() {
+	/** Distancia maxima para ajustar un punto a la calle mas proxima. */
+	public static double getToleranciaAjusteMetros() {
 
-		return segundosTramo;
+		return toleranciaAjusteMetros;
 	}
 
-	/** Cantidad de pasos en que se divide cada tramo de la simulacion. */
-	public static int getPasosTramo() {
+	public static String getRutasMotor() {
 
-		return pasosTramo;
+		return rutasMotor;
 	}
 
-	/** Tiempo maximo que un viaje puede esperar a que un conductor lo acepte. */
-	public static double getEsperaMaximaSegundos() {
+	public static String getRutasOsm() {
 
-		return esperaMaximaSegundos;
+		return rutasOsm;
 	}
 
-	/** Capacidad de la bandeja de cada conductor simulado. */
-	public static int getCapacidadBandeja() {
+	public static String getRutasCache() {
 
-		return capacidadBandeja;
+		return rutasCache;
 	}
 
-	/** Cantidad maxima de conductores que se simulan a la vez. */
-	public static int getMaximoConductores() {
+	public static String getCiudadNombre() {
 
-		return maximoConductores;
+		return ciudadNombre;
 	}
+
+	public static double getMapaCentroLatitud() {
+
+		return mapaCentroLatitud;
+	}
+
+	public static double getMapaCentroLongitud() {
+
+		return mapaCentroLongitud;
+	}
+
+	public static int getMapaZoom() {
+
+		return mapaZoom;
+	}
+	public static double getSegundosTramo() { return segundosTramo; }
+	public static int getPasosTramo() { return pasosTramo; }
+	public static double getEsperaMaximaSegundos() { return esperaMaximaSegundos; }
+	public static int getCapacidadBandeja() { return capacidadBandeja; }
+	public static int getMaximoConductores() { return maximoConductores; }
 }
