@@ -32,6 +32,7 @@ public class Vehiculo {
 	 *
 	 * @param patente   patente identificatoria del vehículo
 	 * @param modelo    modelo comercial del vehículo
+	 * @param capacidad capacidad de pasajeros del vehículo
 	 * @param categoria categoría de servicio del vehículo
 	 * @param tipo      tipo físico del vehículo
 	 * @param servicio  tipos de servicio que puede prestar
@@ -135,7 +136,7 @@ public class Vehiculo {
 	/**
 	 * Agrega un tipo de servicio habilitado para el vehículo.
 	 *
-	 * @param tipoServicio tipo de servicio que se desea habilitar
+	 * @param nuevoServicio tipo de servicio que se desea habilitar
 	 */
 	public void agregarTipoServicio(TipoServicio nuevoServicio) {
 

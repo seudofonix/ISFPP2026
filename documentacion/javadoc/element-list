@@ -1,0 +1,17 @@
+aplicacion
+datos
+datos.factory
+logica
+modelo
+rutas.api
+rutas.impl
+servicio
+simulacion
+ubicacion
+ui.api
+ui.impl.javafx
+ui.impl.javafx.controller
+ui.impl.javafx.map
+usuario
+vehiculo
+viajes
