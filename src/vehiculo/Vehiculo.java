@@ -23,7 +23,7 @@ public class Vehiculo {
 
 	private CategoriaVehiculo categoriaVehiculo;
 	private TipoVehiculo tipoVehiculo;
-	private Ubicacion ubicacion; // posicion actual del vehiculo (sobre una calle), null si no se asigno
+	private volatile Ubicacion ubicacion; // posicion actual del vehiculo (sobre una calle), null si no se asigno
 	private Set<TipoServicio> tipoServicio; // Un vehiculo puede ser de ambos tipos al mismo tiempo.
 
 	/**

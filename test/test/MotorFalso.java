@@ -15,6 +15,8 @@ public class MotorFalso implements PlanificadorRutas {
 
 	public boolean hayCalles = true;
 	public boolean cerrado = false;
+	/** Nombre de calle que informa el motor para cualquier punto (null = calle sin nombre). */
+	public String calle = null;
 
 	@Override
 	public RutaCalculada calcular(Ubicacion origen, Ubicacion destino, TipoVehiculo vehiculo) {
@@ -34,6 +36,12 @@ public class MotorFalso implements PlanificadorRutas {
 	public Optional<Ubicacion> ajustarACalle(Ubicacion candidata, double maxDistanciaMetros) {
 
 		return hayCalles ? Optional.of(candidata) : Optional.empty();
+	}
+
+	@Override
+	public Optional<String> nombreCalle(Ubicacion punto) {
+
+		return Optional.ofNullable(calle);
 	}
 
 	@Override

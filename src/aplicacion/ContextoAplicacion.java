@@ -10,18 +10,23 @@
 package aplicacion;
 
 import java.io.IOException;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.function.Consumer;
 import modelo.ConfiguracionSimulacion;
 import datos.CargarParametros;
 import datos.Datos;
 import modelo.GestorViajes;
+import logica.Movilidad;
+import rutas.api.Geocodificador;
 import rutas.api.PlanificadorRutas;
+import rutas.impl.GeocodificadorOsm;
 import rutas.impl.PlanificadorRutasFactory;
 import servicio.Servicio;
 import simulacion.GeneradorUbicacionesViales;
@@ -30,14 +35,14 @@ import usuario.EstadoConductor;
 import usuario.RolUsuario;
 import usuario.Usuario;
 import vehiculo.Vehiculo;
+import viajes.EstadoViaje;
 import viajes.Viaje;
 
 public class ContextoAplicacion implements AutoCloseable {
 
-	private static final int MAX_CONDUCTORES_SIMULADOS = 3;
-
 	private final PlanificadorRutas motorVial;
 	private final GeneradorUbicacionesViales generadorUbicaciones;
+	private final Geocodificador geocodificador;
 	private final GestorViajes gestor = new GestorViajes(this::viajeCambio);
 
 	private volatile List<Usuario> usuarios = List.of();
@@ -48,10 +53,18 @@ public class ContextoAplicacion implements AutoCloseable {
 	private volatile Usuario usuarioLogueado;
 	private volatile Consumer<Viaje> observadorViajes;
 
+	/** Contexto sin domicilios: las direcciones se informan solo con el nombre de la calle. */
 	public ContextoAplicacion(PlanificadorRutas motorVial, GeneradorUbicacionesViales generadorUbicaciones) {
+
+		this(motorVial, generadorUbicaciones, new GeocodificadorOsm(motorVial, null));
+	}
+
+	public ContextoAplicacion(PlanificadorRutas motorVial, GeneradorUbicacionesViales generadorUbicaciones,
+			Geocodificador geocodificador) {
 
 		this.motorVial = Objects.requireNonNull(motorVial, "motorVial");
 		this.generadorUbicaciones = Objects.requireNonNull(generadorUbicaciones, "generadorUbicaciones");
+		this.geocodificador = Objects.requireNonNull(geocodificador, "geocodificador");
 	}
 
 	/**
@@ -62,7 +75,8 @@ public class ContextoAplicacion implements AutoCloseable {
 		CargarParametros.parametros();
 
 		PlanificadorRutas motor = PlanificadorRutasFactory.crear();
-		ContextoAplicacion contexto = new ContextoAplicacion(motor, new GeneradorUbicacionesViales(motor));
+		ContextoAplicacion contexto = new ContextoAplicacion(motor, new GeneradorUbicacionesViales(motor),
+				PlanificadorRutasFactory.crearGeocodificador(motor));
 
 		try {
 
@@ -122,8 +136,10 @@ public class ContextoAplicacion implements AutoCloseable {
 
 		return usuarios;
 	}
+
 	public List<Usuario> getConductoresSimulados() {
-	    return conductoresSimulados;
+
+		return conductoresSimulados;
 	}
 
 	public List<Vehiculo> getVehiculos() {
@@ -141,18 +157,26 @@ public class ContextoAplicacion implements AutoCloseable {
 		return motorVial;
 	}
 
-	public GeneradorUbicacionesViales getGeneradorUbicaciones() {
+	/** Convierte un punto del mapa en una direccion legible (calle y altura) para mostrar al usuario. */
+	public Geocodificador getGeocodificador() {
 
-		return generadorUbicaciones;
+		return geocodificador;
+	}
+
+	/** Busca un usuario por su email (sin distinguir mayusculas). */
+	public Optional<Usuario> buscarUsuarioPorEmail(String email) {
+
+		if (email == null || email.isBlank()) {
+
+			return Optional.empty();
+		}
+
+		String buscado = email.trim();
+
+		return usuarios.stream().filter(u -> u.getEmail().equalsIgnoreCase(buscado)).findFirst();
 	}
 
 	// ------------------------------------------------------------------ sesion
-
-	/** Usuarios que pueden ingresar con el rol indicado (todos como cliente; solo conductores como conductor). */
-	public List<Usuario> getUsuariosConRol(RolUsuario rol) {
-
-		return usuarios.stream().filter(u -> rol != RolUsuario.CONDUCTOR || u.getConductor() != null).toList();
-	}
 
 	public Usuario getUsuarioLogueado() {
 
@@ -187,21 +211,18 @@ public class ContextoAplicacion implements AutoCloseable {
 	// ------------------------------------------------------------------ viajes y simulacion (hilos)
 
 	/**
-	 * Arranca un hilo por conductor simulado (hasta {@value #MAX_CONDUCTORES_SIMULADOS}, sin contar al usuario de la
-	 * sesion). Cada uno espera viajes en la cola compartida del GestorViajes.
+	 * Arranca un hilo por conductor simulado (hasta simulacion.maximo.conductores, sin contar al usuario de la
+	 * sesion). Se eligen para que todos los servicios tengan algun conductor que los pueda tomar. Cada uno espera
+	 * viajes en la cola compartida del GestorViajes.
 	 */
 	public void iniciarSimulacion() {
-	    conductoresSimulados = usuarios.stream()
-	            .filter(u -> u.getConductor() != null)
-	            .filter(u -> !u.equals(usuarioLogueado))
-	            .limit(CargarParametros.getMaximoConductores())   // antes: MAX_CONDUCTORES_SIMULADOS
-	            .toList();
 
-	    gestor.iniciar(conductoresSimulados, new ConfiguracionSimulacion(
-	            CargarParametros.getSegundosTramo(),
-	            CargarParametros.getPasosTramo(),
-	            CargarParametros.getEsperaMaximaSegundos(),
-	            CargarParametros.getCapacidadBandeja()));
+		conductoresSimulados = Movilidad.elegirConductoresSimulados(usuarios, servicios, usuarioLogueado,
+				CargarParametros.getMaximoConductores());
+
+		gestor.iniciar(conductoresSimulados,
+				new ConfiguracionSimulacion(CargarParametros.getSegundosTramo(), CargarParametros.getPasosTramo(),
+						CargarParametros.getEsperaMaximaSegundos(), CargarParametros.getCapacidadBandeja()));
 	}
 
 	/**
@@ -212,6 +233,29 @@ public class ContextoAplicacion implements AutoCloseable {
 	public boolean solicitarViaje(Viaje viaje) {
 
 		return gestor.solicitar(viaje);
+	}
+
+	/**
+	 * Rechaza de inmediato un viaje recien solicitado porque no hay ningun conductor disponible para el servicio.
+	 *
+	 * @throws IllegalStateException si el viaje no esta SOLICITADO
+	 */
+	public void rechazarViaje(Viaje viaje) {
+
+		viaje.rechazar(LocalDateTime.now());
+		viajeCambio(viaje);
+	}
+
+	/**
+	 * Cancela un viaje a pedido de un usuario. Los hilos de los conductores notan el cambio de estado y dejan de
+	 * simular ese viaje; el conductor queda DISPONIBLE.
+	 *
+	 * @throws IllegalStateException si el viaje ya termino
+	 */
+	public void cancelarViaje(Viaje viaje, Usuario usuario, String motivo) {
+
+		viaje.cancelar(LocalDateTime.now(), usuario, motivo);
+		viajeCambio(viaje);
 	}
 
 	/**
@@ -230,6 +274,13 @@ public class ContextoAplicacion implements AutoCloseable {
 	}
 
 	private void viajeCambio(Viaje viaje) {
+
+		// al terminar el viaje el vehiculo queda en el destino: desde ahi sale el proximo
+		if (viaje.estadoActual() == EstadoViaje.FINALIZADO && viaje.getVehiculo() != null
+				&& viaje.getDestino() != null) {
+
+			viaje.getVehiculo().setUbicacion(viaje.getDestino());
+		}
 
 		Consumer<Viaje> observador = observadorViajes;
 

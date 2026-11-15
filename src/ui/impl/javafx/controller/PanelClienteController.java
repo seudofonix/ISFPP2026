@@ -1,10 +1,11 @@
 /**
  * Ignacio Bullon - Joel Erlan Hughes - Santiago Gittardi. ISFPP Programacion Orientada a Objetos 2026
  *
- * CONTROLADOR de PanelCliente.fxml. El usuario elige origen y destino (generados al azar o con clics en el
- * mapa), cotiza y solicita el viaje. Coordina la logica (ValidacionUbicaciones, Movilidad,
- * PlanificacionViajeService), el mapa (VisualizadorMapa) y los conductores simulados que corren en hilos
- * (ContextoAplicacion / GestorViajes). No implementa algoritmos viales ni conoce Leaflet.
+ * CONTROLADOR de PanelCliente.fxml. El usuario elige origen y destino con clics en el mapa (se le muestran la
+ * calle y la altura, no las coordenadas), cotiza, solicita el viaje y puede cancelarlo. Coordina la logica
+ * (ValidacionUbicaciones, Movilidad, PlanificacionViajeService), el mapa (VisualizadorMapa) y los conductores
+ * simulados que corren en hilos (ContextoAplicacion / GestorViajes). No implementa algoritmos viales ni conoce
+ * Leaflet.
  */
 package ui.impl.javafx.controller;
 
@@ -25,7 +26,7 @@ import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
-import javafx.scene.control.ToggleButton;
+import javafx.scene.control.TextInputDialog;
 import javafx.scene.web.WebView;
 import javafx.stage.Stage;
 import javafx.util.StringConverter;
@@ -56,18 +57,14 @@ public class PanelClienteController {
 	@FXML private Label lblUsuario;
 	@FXML private Button btnCerrarSesion;
 	@FXML private Node panelFormulario;
-
 	@FXML private ComboBox<Servicio> cmbServicios;
-	@FXML private ToggleButton swModoMapa;
+	@FXML private Button btnElegirPuntos;
 	@FXML private Label lblPaso;
-	@FXML private TextField txtLatOrigen;
-	@FXML private TextField txtLonOrigen;
-	@FXML private TextField txtLatDestino;
-	@FXML private TextField txtLonDestino;
-	@FXML private Button btnGenerarOrigen;
-	@FXML private Button btnGenerarDestino;
+	@FXML private TextField txtOrigen;
+	@FXML private TextField txtDestino;
 	@FXML private Button btnCotizar;
 	@FXML private Button btnSolicitar;
+	@FXML private Button btnCancelarViaje;
 	@FXML private Label lblDistancia;
 	@FXML private Label lblTiempo;
 	@FXML private Label lblCosto;
@@ -78,10 +75,7 @@ public class PanelClienteController {
 
 	private VisualizadorMapa visualizador;
 
-	// estado del formulario
-	private boolean origenConfirmadoEnMapa;
-	private boolean destinoConfirmadoEnMapa;
-	private boolean actualizandoCampos;
+	// estado del formulario (origen y destino ya ajustados a calle; null hasta que se eligen en el mapa)
 	private boolean cotizacionVigente;
 	private Ubicacion origenValido;
 	private Ubicacion destinoValido;
@@ -107,6 +101,7 @@ public class PanelClienteController {
 
 			@Override
 			public String toString(Servicio s) {
+
 				return s == null ? ""
 						: s.getNombre() + " (" + s.getTipoVehiculo() + ", " + s.getCategoriaVehiculo() + ", "
 								+ s.getTipoServicio() + ")";
@@ -114,21 +109,11 @@ public class PanelClienteController {
 
 			@Override
 			public Servicio fromString(String texto) {
+
 				return null;
 			}
 		});
 		cmbServicios.valueProperty().addListener((obs, a, b) -> invalidarCotizacion());
-
-		for (TextField campo : new TextField[] { txtLatOrigen, txtLonOrigen, txtLatDestino, txtLonDestino }) {
-
-			campo.textProperty().addListener((obs, a, b) -> {
-
-				if (!actualizandoCampos) {
-
-					invalidarCotizacion();
-				}
-			});
-		}
 
 		visualizador = new VisualizadorRutasLeaflet(mapaWeb);
 		visualizador.configurarSeleccion(this::recibirPuntoMapa);
@@ -137,55 +122,43 @@ public class PanelClienteController {
 		contexto.setObservadorViajes(viaje -> Platform.runLater(() -> alCambiarViaje(viaje)));
 		contexto.iniciarSimulacion();
 
-		invalidarCotizacion();
+		iniciarSeleccionMapa();
 	}
 
 	// ------------------------------------------------------------------ ubicaciones
 
 	@FXML
-	private void handleCambiarModoUbicaciones() {
+	private void handleElegirPuntos() {
 
-		invalidarCotizacion();
-
-		if (swModoMapa.isSelected()) {
-
-			iniciarSeleccionMapa();
-
-		} else {
-
-			visualizador.cancelarSeleccion();
-			visualizador.limpiarSeleccion();
-			origenConfirmadoEnMapa = false;
-			destinoConfirmadoEnMapa = false;
-			modoCampos(false);
-			lblPaso.setText("");
-		}
-
-		actualizarBotones();
+		iniciarSeleccionMapa();
 	}
 
-	/** Primera ida: vacia el formulario y le pide al mapa que espere el clic del origen. */
+	/** Vacia origen y destino y le pide al mapa que espere el clic del origen. */
 	private void iniciarSeleccionMapa() {
 
-		limpiarCampos();
-		origenConfirmadoEnMapa = false;
-		destinoConfirmadoEnMapa = false;
-		modoCampos(true);
-		visualizador.limpiarSeleccion();
-		visualizador.limpiarRutas();
+		if (viajeActual != null) {
 
+			return;
+		}
+
+		origenValido = null;
+		destinoValido = null;
+		txtOrigen.clear();
+		txtDestino.clear();
+		visualizador.limpiarSeleccion();
+		invalidarCotizacion();
 		lblPaso.setText("Paso 1 de 2: hace clic en el mapa para elegir el ORIGEN.");
 		visualizador.activarSeleccion("origen");
 	}
 
 	/**
 	 * Vuelta del mapa: llega el clic (ya en el hilo de JavaFX). Se valida y ajusta a calle; si es valido se
-	 * completa el formulario, se dibuja el marcador y se pasa al paso siguiente; si no, se avisa y se sigue
-	 * esperando el mismo paso.
+	 * muestra la direccion (calle y altura), se dibuja el marcador y se pasa al paso siguiente; si no, se avisa y
+	 * se sigue esperando el mismo paso.
 	 */
 	void recibirPuntoMapa(String tipo, Ubicacion clic) {
 
-		if (!swModoMapa.isSelected()) {
+		if (viajeActual != null) {
 
 			return;
 		}
@@ -193,20 +166,21 @@ public class PanelClienteController {
 		try {
 
 			Ubicacion sobreCalle = ValidacionUbicaciones.validarYAjustar(clic, contexto.getMotorVial());
+			String direccion = contexto.getGeocodificador().direccion(sobreCalle);
 
 			if ("origen".equals(tipo)) {
 
-				completarCoordenadas(sobreCalle, txtLatOrigen, txtLonOrigen);
+				origenValido = sobreCalle;
+				txtOrigen.setText(direccion);
 				visualizador.mostrarMarcadorSeleccion("origen", sobreCalle);
-				origenConfirmadoEnMapa = true;
 				lblPaso.setText("Paso 2 de 2: hace clic en el mapa para elegir el DESTINO.");
 				visualizador.activarSeleccion("destino");
 
 			} else {
 
-				completarCoordenadas(sobreCalle, txtLatDestino, txtLonDestino);
+				destinoValido = sobreCalle;
+				txtDestino.setText(direccion);
 				visualizador.mostrarMarcadorSeleccion("destino", sobreCalle);
-				destinoConfirmadoEnMapa = true;
 				visualizador.cancelarSeleccion();
 				lblPaso.setText("Origen y destino confirmados. Ya podes cotizar.");
 			}
@@ -217,34 +191,6 @@ public class PanelClienteController {
 
 			Alertas.advertencia("Punto no valido", ex.getMessage());
 			visualizador.activarSeleccion(tipo); // se mantiene el mismo paso
-		}
-	}
-
-	@FXML
-	private void handleGenerarOrigenAleatorio() {
-
-		generarAleatorio("origen", txtLatOrigen, txtLonOrigen);
-	}
-
-	@FXML
-	private void handleGenerarDestinoAleatorio() {
-
-		generarAleatorio("destino", txtLatDestino, txtLonDestino);
-	}
-
-	private void generarAleatorio(String tipo, TextField campoLat, TextField campoLon) {
-
-		try {
-
-			Ubicacion ubicacion = contexto.getGeneradorUbicaciones().generar();
-
-			completarCoordenadas(ubicacion, campoLat, campoLon);
-			visualizador.mostrarMarcadorSeleccion(tipo, ubicacion);
-			invalidarCotizacion();
-
-		} catch (IllegalStateException ex) {
-
-			Alertas.error("No se pudo generar la ubicacion", ex.getMessage());
 		}
 	}
 
@@ -262,14 +208,12 @@ public class PanelClienteController {
 				throw new IllegalArgumentException("Elegi un servicio.");
 			}
 
-			Ubicacion origen = ValidacionUbicaciones.validarYAjustar(
-					ValidacionUbicaciones.validarCoordenadas(txtLatOrigen.getText(), txtLonOrigen.getText(), "Origen"),
-					contexto.getMotorVial());
-			Ubicacion destino = ValidacionUbicaciones.validarYAjustar(ValidacionUbicaciones
-					.validarCoordenadas(txtLatDestino.getText(), txtLonDestino.getText(), "Destino"),
-					contexto.getMotorVial());
+			if (origenValido == null || destinoValido == null) {
 
-			double km = origen.calcularDistancia(destino);
+				throw new IllegalArgumentException("Elegi el origen y el destino en el mapa.");
+			}
+
+			double km = origenValido.calcularDistancia(destinoValido);
 
 			if (km <= 0) {
 
@@ -279,18 +223,10 @@ public class PanelClienteController {
 			double minutos = km / CargarParametros.getVelocidadMediaKmh() * 60.0;
 			double costo = servicio.calcularCosto(km, minutos);
 
-			// se muestran las posiciones ya ajustadas a calle: son las que despues usa el motor de rutas
-			completarCoordenadas(origen, txtLatOrigen, txtLonOrigen);
-			completarCoordenadas(destino, txtLatDestino, txtLonDestino);
-			visualizador.mostrarMarcadorSeleccion("origen", origen);
-			visualizador.mostrarMarcadorSeleccion("destino", destino);
-
 			lblDistancia.setText(String.format(Locale.ROOT, "%.2f km (en linea recta)", km));
 			lblTiempo.setText(String.format(Locale.ROOT, "%.0f min", minutos));
 			lblCosto.setText(String.format(Locale.ROOT, "$ %.2f", costo));
 
-			origenValido = origen;
-			destinoValido = destino;
 			servicioCotizado = servicio;
 			cotizacionVigente = true;
 			actualizarBotones();
@@ -312,13 +248,13 @@ public class PanelClienteController {
 
 		Usuario cliente = contexto.getUsuarioLogueado();
 
-		// 1) Movilidad elige el conductor compatible mas cercano entre los que atienden la cola
+		// 1) Movilidad elige el conductor disponible y compatible mas cercano entre los que atienden la cola
 		Optional<Asignacion> asignacion = Movilidad.seleccionarConductor(contexto.getConductoresSimulados(),
 				servicioCotizado, origenValido);
 
 		if (asignacion.isEmpty()) {
 
-			Alertas.error("Sin conductores", "No hay conductores disponibles para ese servicio en este momento.");
+			rechazarPorFaltaDeConductores(cliente);
 			return;
 		}
 
@@ -369,8 +305,73 @@ public class PanelClienteController {
 	}
 
 	/**
-	 * Aviso de un hilo de conductor (ya en el hilo de JavaFX): cambio el estado del viaje. Si lo tomo un
-	 * conductor distinto del elegido por cercania, se recalcula y redibuja la ruta para el vehiculo real.
+	 * No hay ningun conductor disponible para el servicio: la reserva queda registrada y se rechaza al instante,
+	 * sin esperar el tiempo maximo de espera.
+	 */
+	private void rechazarPorFaltaDeConductores(Usuario cliente) {
+
+		Viaje viaje = new Viaje(cliente, origenValido, destinoValido, servicioCotizado);
+
+		try {
+
+			viaje.solicitar(LocalDateTime.now());
+			contexto.rechazarViaje(viaje);
+
+		} catch (IllegalStateException ex) {
+
+			Alertas.error("No se pudo solicitar el viaje", ex.getMessage());
+			return;
+		}
+
+		cotizacionVigente = false;
+		actualizarBotones();
+		mostrarEstado(viaje);
+		Alertas.informacion("Reserva rechazada",
+				"No hay conductores disponibles para ese servicio en este momento. La reserva fue rechazada.");
+	}
+
+	// ------------------------------------------------------------------ cancelacion
+
+	@FXML
+	private void handleCancelarViaje() {
+
+		Viaje viaje = viajeActual;
+
+		if (viaje == null) {
+
+			return;
+		}
+
+		TextInputDialog dialogo = new TextInputDialog();
+		dialogo.setTitle("Cancelar viaje");
+		dialogo.setHeaderText("Queres cancelar el viaje?");
+		dialogo.setContentText("Motivo (opcional):");
+		Optional<String> respuesta = dialogo.showAndWait();
+
+		if (respuesta.isEmpty()) {
+
+			return; // cerro el dialogo: el viaje sigue
+		}
+
+		String motivo = respuesta.get().isBlank() ? "Cancelado por el cliente" : respuesta.get().trim();
+
+		try {
+
+			contexto.cancelarViaje(viaje, contexto.getUsuarioLogueado(), motivo);
+
+		} catch (IllegalStateException ex) {
+
+			Alertas.advertencia("No se pudo cancelar", ex.getMessage());
+		}
+	}
+
+	// ------------------------------------------------------------------ avisos de los conductores
+
+	/**
+	 * Aviso de un hilo de conductor o de una accion del usuario (ya en el hilo de JavaFX): cambio el estado del
+	 * viaje. Si lo tomo un conductor distinto del elegido por cercania, se recalcula y redibuja la ruta para el
+	 * vehiculo real. El marcador del conductor se mueve por cada tramo durante el tiempo que dura en la
+	 * simulacion.
 	 */
 	private void alCambiarViaje(Viaje viaje) {
 
@@ -382,10 +383,18 @@ public class PanelClienteController {
 		EstadoViaje estado = viaje.estadoActual();
 		mostrarEstado(viaje);
 
-		if (estado == EstadoViaje.ACEPTADO && viaje.getVehiculo() != null
-				&& viaje.getVehiculo() != vehiculoPlanificado) {
+		if (estado == EstadoViaje.ACEPTADO) {
 
-			replanificar(viaje);
+			if (viaje.getVehiculo() != null && viaje.getVehiculo() != vehiculoPlanificado) {
+
+				replanificar(viaje);
+			}
+
+			visualizador.animarConductor("acercamiento", CargarParametros.getSegundosTramo());
+
+		} else if (estado == EstadoViaje.INICIADO) {
+
+			visualizador.animarConductor("traslado", CargarParametros.getSegundosTramo());
 		}
 
 		if (estado == EstadoViaje.FINALIZADO || estado == EstadoViaje.CANCELADO || estado == EstadoViaje.RECHAZADO) {
@@ -396,11 +405,20 @@ public class PanelClienteController {
 
 			if (estado != EstadoViaje.FINALIZADO) {
 
+				visualizador.detenerAnimacion();
 				visualizador.limpiarRutas();
 				lblRecogida.setText("-");
 				lblTraslado.setText("-");
 			}
+
+			if (estado == EstadoViaje.RECHAZADO) {
+
+				Alertas.informacion("Reserva rechazada",
+						"Ningun conductor tomo el viaje a tiempo. La reserva fue rechazada.");
+			}
 		}
+
+		actualizarCancelar();
 	}
 
 	private void replanificar(Viaje viaje) {
@@ -409,7 +427,6 @@ public class PanelClienteController {
 
 			RutasViaje rutas = new PlanificacionViajeService(contexto.getMotorVial()).planificar(viaje.getVehiculo(),
 					viaje.getOrigen(), viaje.getDestino());
-
 			vehiculoPlanificado = viaje.getVehiculo();
 			dibujar(rutas, vehiculoPlanificado);
 
@@ -434,10 +451,12 @@ public class PanelClienteController {
 	private void mostrarEstado(Viaje viaje) {
 
 		List<RegistroViaje> registros;
+		String motivo;
 
 		synchronized (viaje) {
 
 			registros = new ArrayList<>(viaje.getRegistroViaje());
+			motivo = viaje.getMotivoCancelacion();
 		}
 
 		StringBuilder sb = new StringBuilder();
@@ -456,9 +475,27 @@ public class PanelClienteController {
 					.append(" (").append(vehiculo.getPatente()).append(")\n");
 		}
 
-		sb.append("Estado actual: ").append(viaje.estadoActual());
+		EstadoViaje estado = viaje.estadoActual();
+		sb.append("Estado actual: ").append(estado).append(" - ").append(descripcion(estado));
+
+		if (estado == EstadoViaje.CANCELADO && motivo != null) {
+
+			sb.append("\nMotivo: ").append(motivo);
+		}
 
 		txtAreaEstado.setText(sb.toString());
+	}
+
+	private String descripcion(EstadoViaje estado) {
+
+		return switch (estado) {
+			case SOLICITADO -> "buscando conductor";
+			case ACEPTADO -> "el conductor va hacia tu origen";
+			case INICIADO -> "viaje en curso hacia el destino";
+			case FINALIZADO -> "llegaste a destino";
+			case CANCELADO -> "viaje cancelado";
+			case RECHAZADO -> "no hubo conductor disponible";
+		};
 	}
 
 	// ------------------------------------------------------------------ sesion
@@ -466,16 +503,16 @@ public class PanelClienteController {
 	@FXML
 	private void handleCerrarSesion() {
 
+		visualizador.detenerAnimacion();
 		contexto.setObservadorViajes(null);
 		contexto.cerrarSesion(); // detiene los hilos y cancela el viaje en curso
-
 		VistasFX.mostrar((Stage) btnCerrarSesion.getScene().getWindow(), "Login.fxml", "Movilidad Digital - Ingreso",
 				contexto);
 	}
 
 	// ------------------------------------------------------------------ estado del formulario
 
-	/** Cualquier cambio (ubicacion, servicio, modo) descarta la cotizacion y los recorridos anteriores. */
+	/** Cualquier cambio (ubicacion, servicio) descarta la cotizacion y los recorridos anteriores. */
 	private void invalidarCotizacion() {
 
 		if (viajeActual != null) {
@@ -500,13 +537,15 @@ public class PanelClienteController {
 
 	private void actualizarBotones() {
 
-		boolean camposCompletos = !txtLatOrigen.getText().isBlank() && !txtLonOrigen.getText().isBlank()
-				&& !txtLatDestino.getText().isBlank() && !txtLonDestino.getText().isBlank();
-		boolean listoParaCotizar = camposCompletos
-				&& (!swModoMapa.isSelected() || (origenConfirmadoEnMapa && destinoConfirmadoEnMapa));
-
-		btnCotizar.setDisable(!listoParaCotizar);
+		btnCotizar.setDisable(origenValido == null || destinoValido == null);
 		btnSolicitar.setDisable(!cotizacionVigente || viajeActual != null);
+		actualizarCancelar();
+	}
+
+	/** Se puede cancelar mientras el viaje esta buscando conductor, yendo al origen o en curso. */
+	private void actualizarCancelar() {
+
+		btnCancelarViaje.setDisable(viajeActual == null);
 	}
 
 	private void bloquearFormulario(boolean bloquear) {
@@ -517,35 +556,7 @@ public class PanelClienteController {
 
 			actualizarBotones();
 		}
-	}
 
-	/** En modo mapa los campos son de solo lectura y no se generan puntos al azar. */
-	private void modoCampos(boolean modoMapa) {
-
-		for (TextField campo : new TextField[] { txtLatOrigen, txtLonOrigen, txtLatDestino, txtLonDestino }) {
-
-			campo.setEditable(!modoMapa);
-		}
-
-		btnGenerarOrigen.setDisable(modoMapa);
-		btnGenerarDestino.setDisable(modoMapa);
-	}
-
-	private void limpiarCampos() {
-
-		actualizandoCampos = true;
-		txtLatOrigen.clear();
-		txtLonOrigen.clear();
-		txtLatDestino.clear();
-		txtLonDestino.clear();
-		actualizandoCampos = false;
-	}
-
-	private void completarCoordenadas(Ubicacion ubicacion, TextField campoLat, TextField campoLon) {
-
-		actualizandoCampos = true;
-		campoLat.setText(String.format(Locale.ROOT, "%.6f", ubicacion.getLatitud()));
-		campoLon.setText(String.format(Locale.ROOT, "%.6f", ubicacion.getLongitud()));
-		actualizandoCampos = false;
+		actualizarCancelar();
 	}
 }

@@ -31,4 +31,15 @@ public interface VisualizadorMapa {
 
 	/** Dibuja el marcador definitivo de un punto ya validado. */
 	void mostrarMarcadorSeleccion(String tipo, Ubicacion ubicacion);
+
+	/**
+	 * Mueve el marcador del conductor a lo largo de un tramo ya dibujado, de punta a punta, en el tiempo indicado.
+	 *
+	 * @param tramo    "acercamiento" (conductor hacia el origen) o "traslado" (origen hacia el destino)
+	 * @param segundos duracion del recorrido
+	 */
+	void animarConductor(String tramo, double segundos);
+
+	/** Frena el movimiento del conductor y lo deja donde esta. */
+	void detenerAnimacion();
 }

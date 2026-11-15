@@ -121,6 +121,19 @@ public final class VisualizadorRutasLeaflet implements VisualizadorMapa {
 				ubicacion.getLatitud(), ubicacion.getLongitud()));
 	}
 
+	@Override
+	public void animarConductor(String tramo, double segundos) {
+		if (!"acercamiento".equals(tramo) && !"traslado".equals(tramo)) {
+			throw new IllegalArgumentException("Tramo invalido: " + tramo);
+		}
+		ejecutar(String.format(Locale.ROOT, "window.animarConductor('%s', %f);", tramo, segundos));
+	}
+
+	@Override
+	public void detenerAnimacion() {
+		ejecutar("window.detenerAnimacion();");
+	}
+
 	// ------------------------------------------------------------------ interno
 
 	/** Ejecuta ya si la pagina cargo; si no, queda en espera hasta SUCCEEDED (window.* todavia no existe). */

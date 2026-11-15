@@ -144,6 +144,26 @@ public final class GraphHopperPlanificador implements PlanificadorRutas {
 	}
 
 	@Override
+	public Optional<String> nombreCalle(Ubicacion punto) {
+
+		if (punto == null) {
+
+			return Optional.empty();
+		}
+
+		Snap snap = hopper.getLocationIndex().findClosest(punto.getLatitud(), punto.getLongitud(), filtroAuto);
+
+		if (!snap.isValid()) {
+
+			return Optional.empty();
+		}
+
+		String nombre = snap.getClosestEdge().getName();
+
+		return nombre == null || nombre.isBlank() ? Optional.empty() : Optional.of(nombre.trim());
+	}
+
+	@Override
 	public void close() {
 
 		hopper.close();

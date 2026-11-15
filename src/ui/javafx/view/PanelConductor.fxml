@@ -80,6 +80,28 @@
                               </TableView>
                            </content>
                         </Tab>
+                        <Tab text="Viajes">
+                           <content>
+                              <VBox spacing="6.0">
+                                 <padding>
+                                    <Insets bottom="6.0" left="6.0" right="6.0" top="6.0" />
+                                 </padding>
+                                 <children>
+                                    <Button mnemonicParsing="false" onAction="#handleActualizarViajes" text="Actualizar" />
+                                    <TableView fx:id="tablaViajes" VBox.vgrow="ALWAYS">
+                                       <columns>
+                                          <TableColumn fx:id="colViaId" prefWidth="90.0" text="Id" />
+                                          <TableColumn fx:id="colViaCliente" prefWidth="150.0" text="Cliente" />
+                                          <TableColumn fx:id="colViaConductor" prefWidth="150.0" text="Conductor" />
+                                          <TableColumn fx:id="colViaServicio" prefWidth="110.0" text="Servicio" />
+                                          <TableColumn fx:id="colViaEstado" prefWidth="100.0" text="Estado" />
+                                          <TableColumn fx:id="colViaHora" prefWidth="90.0" text="Hora" />
+                                       </columns>
+                                    </TableView>
+                                 </children>
+                              </VBox>
+                           </content>
+                        </Tab>
                      </tabs>
                   </TabPane>
                </content>

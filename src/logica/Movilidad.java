@@ -2,15 +2,19 @@
  * Ignacio Bullon - Joel Erlan Hughes - Santiago Gittardi. ISFPP Programacion Orientada a Objetos 2026
  *
  * Reglas del dominio para elegir quien presta un servicio: conductores compatibles y disponibles, el mas
- * cercano al origen segun Haversine, y clientes que pueden pedir un viaje. No pertenecen al inicializador
+ * cercano al origen segun Haversine, y que conductores atienden la simulacion. No pertenecen al inicializador
  * del escenario ni a la interfaz.
  */
 package logica;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 import servicio.Servicio;
 import ubicacion.Ubicacion;
@@ -44,10 +48,63 @@ public final class Movilidad {
 						.thenComparing(a -> a.conductor().getEmail()));
 	}
 
-	/** Usuarios que pueden pedir un viaje: los que no tienen uno activo como clientes. */
-	public static List<Usuario> filtrarClientesDisponibles(Collection<Usuario> usuarios) {
+	/**
+	 * Elige los conductores que atienden la simulacion. Primero se toman los que cubren mas servicios todavia sin
+	 * cubrir (un conductor con vehiculo PREMIUM tambien cubre CONFORT y ESTANDAR, pero no al reves) y, si sobran
+	 * lugares, se completa por email. Asi cada servicio del catalogo tiene a alguien que pueda tomarlo aunque se
+	 * simulen pocos conductores.
+	 *
+	 * @param excluido usuario de la sesion, que nunca se simula (puede ser null)
+	 * @param maximo   cantidad maxima de conductores
+	 */
+	public static List<Usuario> elegirConductoresSimulados(Collection<Usuario> usuarios,
+			Collection<Servicio> servicios, Usuario excluido, int maximo) {
 
-		return usuarios.stream().filter(u -> u.getCliente() != null && !u.getCliente().enViaje()).toList();
+		List<Usuario> pendientes = usuarios.stream()
+				.filter(u -> u.getConductor() != null && !u.equals(excluido))
+				.sorted(Comparator.comparing(Usuario::getEmail)).collect(Collectors.toCollection(ArrayList::new));
+		List<Usuario> elegidos = new ArrayList<>();
+		Set<Servicio> sinCubrir = new LinkedHashSet<>(servicios);
+
+		while (elegidos.size() < maximo && !pendientes.isEmpty() && !sinCubrir.isEmpty()) {
+
+			Usuario mejor = null;
+			long mejorCobertura = 0;
+
+			for (Usuario candidato : pendientes) {
+
+				long cobertura = sinCubrir.stream()
+						.filter(s -> candidato.getConductor().vehiculoCompatible(s) != null).count();
+
+				if (cobertura > mejorCobertura) {
+
+					mejor = candidato;
+					mejorCobertura = cobertura;
+				}
+			}
+
+			if (mejor == null) {
+
+				break;
+			}
+
+			Usuario elegido = mejor;
+			elegidos.add(elegido);
+			pendientes.remove(elegido);
+			sinCubrir.removeIf(s -> elegido.getConductor().vehiculoCompatible(s) != null);
+		}
+
+		for (Usuario usuario : pendientes) {
+
+			if (elegidos.size() >= maximo) {
+
+				break;
+			}
+
+			elegidos.add(usuario);
+		}
+
+		return List.copyOf(elegidos);
 	}
 
 	private static Optional<Asignacion> candidato(Usuario usuario, Servicio servicio, Ubicacion origen) {

@@ -7,6 +7,7 @@
 package rutas.impl;
 
 import datos.CargarParametros;
+import rutas.api.Geocodificador;
 import rutas.api.PlanificadorRutas;
 import rutas.api.RutaNoDisponibleException;
 
@@ -25,5 +26,11 @@ public final class PlanificadorRutasFactory {
 		}
 
 		throw new RutaNoDisponibleException("Motor de rutas desconocido: '" + motor + "'. Usar 'graphhopper'.");
+	}
+
+	/** Geocodificador que informa calle y altura de un punto; usa el mismo extracto .osm que el motor de rutas. */
+	public static Geocodificador crearGeocodificador(PlanificadorRutas motor) {
+
+		return new GeocodificadorOsm(motor, CargarParametros.getRutasOsm());
 	}
 }

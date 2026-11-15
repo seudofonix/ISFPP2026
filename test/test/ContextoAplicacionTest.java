@@ -11,6 +11,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 import java.util.Set;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
@@ -87,7 +88,6 @@ class ContextoAplicacionTest {
 
 		assertEquals(RolUsuario.CLIENTE, cliente.getRolActivo());
 		assertEquals(6, contexto.getUsuarios().size());
-		assertEquals(5, contexto.getUsuariosConRol(RolUsuario.CONDUCTOR).size());
 	}
 
 	@Test
@@ -148,5 +148,84 @@ class ContextoAplicacionTest {
 		contexto.close();
 
 		assertTrue(motor.cerrado);
+	}
+
+	@Test
+	void sinConductoresDisponiblesElViajeSeRechazaAlInstante() {
+
+		contexto.setUsuarioLogueado(cliente);
+		List<EstadoViaje> avisos = new CopyOnWriteArrayList<>();
+		contexto.setObservadorViajes(v -> avisos.add(v.estadoActual()));
+
+		Viaje viaje = new Viaje(cliente, new Ubicacion(-42.77, -65.04), new Ubicacion(-42.76, -65.03), estandar);
+		viaje.solicitar(LocalDateTime.now());
+		contexto.rechazarViaje(viaje);
+
+		assertEquals(EstadoViaje.RECHAZADO, viaje.estadoActual());
+		assertEquals(List.of(EstadoViaje.RECHAZADO), avisos);
+		assertFalse(cliente.getCliente().enViaje(), "un viaje rechazado no deja al cliente ocupado");
+	}
+
+	@Test
+	void elClienteCancelaUnViajeEnCursoYElConductorQuedaDisponible() throws InterruptedException {
+
+		contexto.setUsuarioLogueado(cliente);
+		BlockingQueue<EstadoViaje> avisos = new LinkedBlockingQueue<>();
+		contexto.setObservadorViajes(v -> avisos.add(v.estadoActual()));
+		contexto.iniciarSimulacion();
+
+		Viaje viaje = new Viaje(cliente, new Ubicacion(-42.77, -65.04), new Ubicacion(-42.76, -65.03), estandar);
+		viaje.solicitar(LocalDateTime.now());
+		assertTrue(contexto.solicitarViaje(viaje));
+		assertEquals(EstadoViaje.ACEPTADO, avisos.poll(5, TimeUnit.SECONDS));
+
+		Usuario conductor = viaje.getConductor();
+		contexto.cancelarViaje(viaje, cliente, "Cambie de idea");
+
+		assertEquals(EstadoViaje.CANCELADO, viaje.estadoActual());
+		assertEquals(RolUsuario.CLIENTE, viaje.getRolCancela());
+		assertEquals("Cambie de idea", viaje.getMotivoCancelacion());
+		assertEquals(EstadoConductor.DISPONIBLE, conductor.getConductor().getEstadoConductor());
+		assertNull(conductor.getConductor().getVehiculoActivo());
+		assertEquals(EstadoViaje.CANCELADO, avisos.poll(5, TimeUnit.SECONDS));
+		assertFalse(cliente.getCliente().enViaje());
+
+		// el hilo del conductor no retoma el viaje cancelado
+		Thread.sleep(500);
+		assertEquals(EstadoViaje.CANCELADO, viaje.estadoActual());
+	}
+
+	@Test
+	void alFinalizarElViajeElVehiculoQuedaEnElDestino() throws InterruptedException {
+
+		contexto.setUsuarioLogueado(cliente);
+		BlockingQueue<EstadoViaje> avisos = new LinkedBlockingQueue<>();
+		contexto.setObservadorViajes(v -> avisos.add(v.estadoActual()));
+		contexto.iniciarSimulacion();
+
+		Ubicacion destino = new Ubicacion(-42.76, -65.03);
+		Viaje viaje = new Viaje(cliente, new Ubicacion(-42.77, -65.04), destino, estandar);
+		viaje.solicitar(LocalDateTime.now());
+		assertTrue(contexto.solicitarViaje(viaje));
+
+		EstadoViaje estado;
+
+		do {
+
+			estado = avisos.poll(20, TimeUnit.SECONDS);
+
+		} while (estado != null && estado != EstadoViaje.FINALIZADO);
+
+		assertEquals(EstadoViaje.FINALIZADO, estado);
+		assertEquals(destino, viaje.getVehiculo().getUbicacion());
+		assertEquals(EstadoConductor.DISPONIBLE, viaje.getConductor().getConductor().getEstadoConductor());
+	}
+
+	@Test
+	void seBuscaUnUsuarioPorEmailSinImportarMayusculas() {
+
+		assertEquals(cliente, contexto.buscarUsuarioPorEmail("  CLIENTE@x.com ").orElseThrow());
+		assertTrue(contexto.buscarUsuarioPorEmail("nadie@x.com").isEmpty());
+		assertTrue(contexto.buscarUsuarioPorEmail(" ").isEmpty());
 	}
 }

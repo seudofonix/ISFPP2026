@@ -27,6 +27,16 @@ public interface PlanificadorRutas extends AutoCloseable {
 	 */
 	Optional<Ubicacion> ajustarACalle(Ubicacion candidata, double maxDistanciaMetros);
 
+	/**
+	 * Nombre de la calle sobre la que esta (o a la que se ajusta) un punto.
+	 *
+	 * @return el nombre, o vacio si la calle no tiene nombre o el motor no lo informa
+	 */
+	default Optional<String> nombreCalle(Ubicacion punto) {
+
+		return Optional.empty();
+	}
+
 	@Override
 	void close();
 }

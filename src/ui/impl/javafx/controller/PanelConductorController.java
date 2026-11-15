@@ -2,9 +2,12 @@
  * Ignacio Bullon - Joel Erlan Hughes - Santiago Gittardi. ISFPP Programacion Orientada a Objetos 2026
  *
  * CONTROLADOR de PanelConductor.fxml. Muestra los datos del conductor y la pestana "Tablas" con las
- * subpestanas de vehiculos, usuarios y servicios.
+ * subpestanas de vehiculos, usuarios, servicios y viajes, para poder corroborar los datos cargados (desde la
+ * base o desde los archivos, segun config.properties).
  */
 package ui.impl.javafx.controller;
+
+import java.time.format.DateTimeFormatter;
 
 import aplicacion.ContextoAplicacion;
 import javafx.beans.property.SimpleDoubleProperty;
@@ -21,6 +24,8 @@ import servicio.Servicio;
 import ui.impl.javafx.VistasFX;
 import usuario.Usuario;
 import vehiculo.Vehiculo;
+import viajes.RegistroViaje;
+import viajes.Viaje;
 
 public class PanelConductorController {
 
@@ -46,6 +51,14 @@ public class PanelConductorController {
 	@FXML private TableColumn<Usuario, String> colUsuLicencia;
 	@FXML private TableColumn<Usuario, String> colUsuVehiculos;
 
+	@FXML private TableView<Viaje> tablaViajes;
+	@FXML private TableColumn<Viaje, String> colViaId;
+	@FXML private TableColumn<Viaje, String> colViaCliente;
+	@FXML private TableColumn<Viaje, String> colViaConductor;
+	@FXML private TableColumn<Viaje, String> colViaServicio;
+	@FXML private TableColumn<Viaje, String> colViaEstado;
+	@FXML private TableColumn<Viaje, String> colViaHora;
+
 	@FXML private TableView<Servicio> tablaServicios;
 	@FXML private TableColumn<Servicio, String> colSerNombre;
 	@FXML private TableColumn<Servicio, Number> colSerBase;
@@ -68,13 +81,23 @@ public class PanelConductorController {
 		lblConductor.setText("Conductor: " + conductor.getNombre() + " (" + conductor.getEmail() + ")");
 		lblDetalle.setText("Licencia: " + conductor.getConductor().getLicenciaConducir() + "  |  Estado: "
 				+ conductor.getConductor().getEstadoConductor() + "  |  Vehiculos: "
-				+ String.join(", ", conductor.getConductor().getVehiculos().keySet()));
+				+ String.join(", ", conductor.getConductor().getVehiculos().keySet()) + "  |  Datos: "
+				+ contexto.getOrigenDatos());
 
 		configurarColumnas();
 
 		tablaVehiculos.setItems(FXCollections.observableArrayList(contexto.getVehiculos()));
 		tablaUsuarios.setItems(FXCollections.observableArrayList(contexto.getUsuarios()));
 		tablaServicios.setItems(FXCollections.observableArrayList(contexto.getServicios()));
+		handleActualizarViajes();
+	}
+
+	/** Vuelve a leer los viajes que hay en memoria (los de todos los clientes). */
+	@FXML
+	private void handleActualizarViajes() {
+
+		tablaViajes.setItems(FXCollections.observableArrayList(contexto.getUsuarios().stream()
+				.filter(u -> u.getCliente() != null).flatMap(u -> u.getCliente().getViajes().stream()).toList()));
 	}
 
 	@FXML
@@ -87,6 +110,19 @@ public class PanelConductorController {
 	}
 
 	private void configurarColumnas() {
+
+		DateTimeFormatter hora = DateTimeFormatter.ofPattern("HH:mm:ss");
+		colViaId.setCellValueFactory(c -> new SimpleStringProperty(c.getValue().getId().toString().substring(0, 8)));
+		colViaCliente.setCellValueFactory(c -> new SimpleStringProperty(c.getValue().getCliente().getNombre()));
+		colViaConductor.setCellValueFactory(c -> new SimpleStringProperty(
+				c.getValue().getConductor() == null ? "-" : c.getValue().getConductor().getNombre()));
+		colViaServicio.setCellValueFactory(c -> new SimpleStringProperty(c.getValue().getServicio().getNombre()));
+		colViaEstado.setCellValueFactory(c -> new SimpleStringProperty(String.valueOf(c.getValue().estadoActual())));
+		colViaHora.setCellValueFactory(c -> {
+			var registros = c.getValue().getRegistroViaje();
+			RegistroViaje ultimo = registros.isEmpty() ? null : registros.get(registros.size() - 1);
+			return new SimpleStringProperty(ultimo == null ? "-" : ultimo.getFechaHora().format(hora));
+		});
 
 		colVehPatente.setCellValueFactory(c -> new SimpleStringProperty(c.getValue().getPatente()));
 		colVehModelo.setCellValueFactory(c -> new SimpleStringProperty(c.getValue().getModelo()));
