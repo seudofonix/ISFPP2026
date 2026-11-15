@@ -9,15 +9,16 @@
  */
 package ui.impl.javafx.controller;
 
-import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 import java.util.Optional;
 
 import aplicacion.ContextoAplicacion;
+import aplicacion.ContextoAplicacion.Resultado;
+import aplicacion.ContextoAplicacion.SolicitudViaje;
 import datos.CargarParametros;
+import idioma.Mensajes;
 import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.scene.Node;
@@ -30,8 +31,8 @@ import javafx.scene.control.TextInputDialog;
 import javafx.scene.web.WebView;
 import javafx.stage.Stage;
 import javafx.util.StringConverter;
-import logica.Asignacion;
-import logica.Movilidad;
+import logica.Cotizador;
+import modelo.Cotizacion;
 import logica.PlanificacionViajeService;
 import logica.ValidacionUbicaciones;
 import rutas.api.RutaCalculada;
@@ -94,7 +95,7 @@ public class PanelClienteController {
 	private void initialize() {
 
 		Usuario usuario = contexto.getUsuarioLogueado();
-		lblUsuario.setText("Usuario: " + usuario.getNombre() + " (" + usuario.getEmail() + ")");
+		lblUsuario.setText(Mensajes.get("cliente.usuario", usuario.getNombre(), usuario.getEmail()));
 
 		cmbServicios.setItems(javafx.collections.FXCollections.observableArrayList(contexto.getServicios()));
 		cmbServicios.setConverter(new StringConverter<>() {
@@ -147,7 +148,7 @@ public class PanelClienteController {
 		txtDestino.clear();
 		visualizador.limpiarSeleccion();
 		invalidarCotizacion();
-		lblPaso.setText("Paso 1 de 2: hace clic en el mapa para elegir el ORIGEN.");
+		lblPaso.setText(Mensajes.get("cliente.paso1"));
 		visualizador.activarSeleccion("origen");
 	}
 
@@ -173,7 +174,7 @@ public class PanelClienteController {
 				origenValido = sobreCalle;
 				txtOrigen.setText(direccion);
 				visualizador.mostrarMarcadorSeleccion("origen", sobreCalle);
-				lblPaso.setText("Paso 2 de 2: hace clic en el mapa para elegir el DESTINO.");
+				lblPaso.setText(Mensajes.get("cliente.paso2"));
 				visualizador.activarSeleccion("destino");
 
 			} else {
@@ -182,14 +183,14 @@ public class PanelClienteController {
 				txtDestino.setText(direccion);
 				visualizador.mostrarMarcadorSeleccion("destino", sobreCalle);
 				visualizador.cancelarSeleccion();
-				lblPaso.setText("Origen y destino confirmados. Ya podes cotizar.");
+				lblPaso.setText(Mensajes.get("cliente.pasoListo"));
 			}
 
 			invalidarCotizacion();
 
 		} catch (IllegalArgumentException ex) {
 
-			Alertas.advertencia("Punto no valido", ex.getMessage());
+			Alertas.advertencia(Mensajes.get("cliente.puntoInvalido"), ex.getMessage());
 			visualizador.activarSeleccion(tipo); // se mantiene el mismo paso
 		}
 	}
@@ -202,30 +203,11 @@ public class PanelClienteController {
 		try {
 
 			Servicio servicio = cmbServicios.getValue();
+			Cotizacion cotizacion = Cotizador.cotizar(servicio, origenValido, destinoValido);
 
-			if (servicio == null) {
-
-				throw new IllegalArgumentException("Elegi un servicio.");
-			}
-
-			if (origenValido == null || destinoValido == null) {
-
-				throw new IllegalArgumentException("Elegi el origen y el destino en el mapa.");
-			}
-
-			double km = origenValido.calcularDistancia(destinoValido);
-
-			if (km <= 0) {
-
-				throw new IllegalArgumentException("El origen y el destino no pueden ser el mismo punto.");
-			}
-
-			double minutos = km / CargarParametros.getVelocidadMediaKmh() * 60.0;
-			double costo = servicio.calcularCosto(km, minutos);
-
-			lblDistancia.setText(String.format(Locale.ROOT, "%.2f km (en linea recta)", km));
-			lblTiempo.setText(String.format(Locale.ROOT, "%.0f min", minutos));
-			lblCosto.setText(String.format(Locale.ROOT, "$ %.2f", costo));
+			lblDistancia.setText(Mensajes.get("cliente.distanciaRecta", cotizacion.distanciaKm()));
+			lblTiempo.setText(Mensajes.get("cliente.minutos", cotizacion.duracionMinutos()));
+			lblCosto.setText(Mensajes.get("cliente.precio", cotizacion.costo()));
 
 			servicioCotizado = servicio;
 			cotizacionVigente = true;
@@ -234,7 +216,7 @@ public class PanelClienteController {
 		} catch (IllegalArgumentException ex) {
 
 			invalidarCotizacion();
-			Alertas.advertencia("No se pudo cotizar", ex.getMessage());
+			Alertas.advertencia(Mensajes.get("cliente.noSePudoCotizar"), ex.getMessage());
 		}
 	}
 
@@ -248,86 +230,44 @@ public class PanelClienteController {
 
 		Usuario cliente = contexto.getUsuarioLogueado();
 
-		// 1) Movilidad elige el conductor disponible y compatible mas cercano entre los que atienden la cola
-		Optional<Asignacion> asignacion = Movilidad.seleccionarConductor(contexto.getConductoresSimulados(),
-				servicioCotizado, origenValido);
-
-		if (asignacion.isEmpty()) {
-
-			rechazarPorFaltaDeConductores(cliente);
-			return;
-		}
-
-		// 2) se planifican los dos tramos viales (antes de pedir el viaje, asi un error no deja nada a medias)
-		RutasViaje rutas;
+		// Movilidad elige el conductor, se planifican los tramos y se deja el viaje en la cola (o se rechaza)
+		SolicitudViaje solicitud;
 
 		try {
 
-			rutas = new PlanificacionViajeService(contexto.getMotorVial()).planificar(asignacion.get().vehiculo(),
-					origenValido, destinoValido);
+			solicitud = contexto.pedirViaje(cliente, servicioCotizado, origenValido, destinoValido);
 
 		} catch (RutaNoDisponibleException | IllegalStateException ex) {
 
-			Alertas.error("No se pudo planificar la ruta", ex.getMessage());
+			Alertas.error(Mensajes.get("cliente.noSePudoSolicitar.titulo"), ex.getMessage());
 			return;
 		}
 
-		// 3) se crea y solicita el viaje y se deja en la cola: lo toma el hilo de un conductor simulado
-		Viaje viaje = new Viaje(cliente, origenValido, destinoValido, servicioCotizado);
+		if (solicitud.resultado() == Resultado.SIN_CONDUCTORES) {
 
-		try {
-
-			viaje.solicitar(LocalDateTime.now());
-
-		} catch (IllegalStateException ex) {
-
-			Alertas.error("No se pudo solicitar el viaje", ex.getMessage());
+			cotizacionVigente = false;
+			actualizarBotones();
+			mostrarEstado(solicitud.viaje());
+			Alertas.informacion(Mensajes.get("cliente.reservaRechazada.titulo"), Mensajes.get("cliente.reservaRechazada"));
 			return;
 		}
 
+		if (solicitud.resultado() == Resultado.COLA_LLENA) {
+
+			Alertas.error(Mensajes.get("cliente.noSePudoSolicitar.titulo"), Mensajes.get("cliente.colaLlena"));
+			return;
+		}
+
+		Viaje viaje = solicitud.viaje();
 		viajeActual = viaje;
-		vehiculoPlanificado = asignacion.get().vehiculo();
-
-		if (!contexto.solicitarViaje(viaje)) {
-
-			viajeActual = null;
-			viaje.cancelar(LocalDateTime.now(), cliente, "Sin capacidad");
-			Alertas.error("No se pudo solicitar el viaje",
-					"El sistema no puede tomar la solicitud en este momento. Intenta de nuevo en unos segundos.");
-			return;
-		}
+		vehiculoPlanificado = solicitud.vehiculo();
+		RutasViaje rutas = solicitud.rutas();
 
 		// 4) el mapa dibuja los dos tramos y se informan las metricas viales de cada uno
 		dibujar(rutas, vehiculoPlanificado);
 		cotizacionVigente = false;
 		bloquearFormulario(true);
 		mostrarEstado(viaje);
-	}
-
-	/**
-	 * No hay ningun conductor disponible para el servicio: la reserva queda registrada y se rechaza al instante,
-	 * sin esperar el tiempo maximo de espera.
-	 */
-	private void rechazarPorFaltaDeConductores(Usuario cliente) {
-
-		Viaje viaje = new Viaje(cliente, origenValido, destinoValido, servicioCotizado);
-
-		try {
-
-			viaje.solicitar(LocalDateTime.now());
-			contexto.rechazarViaje(viaje);
-
-		} catch (IllegalStateException ex) {
-
-			Alertas.error("No se pudo solicitar el viaje", ex.getMessage());
-			return;
-		}
-
-		cotizacionVigente = false;
-		actualizarBotones();
-		mostrarEstado(viaje);
-		Alertas.informacion("Reserva rechazada",
-				"No hay conductores disponibles para ese servicio en este momento. La reserva fue rechazada.");
 	}
 
 	// ------------------------------------------------------------------ cancelacion
@@ -343,9 +283,9 @@ public class PanelClienteController {
 		}
 
 		TextInputDialog dialogo = new TextInputDialog();
-		dialogo.setTitle("Cancelar viaje");
-		dialogo.setHeaderText("Queres cancelar el viaje?");
-		dialogo.setContentText("Motivo (opcional):");
+		dialogo.setTitle(Mensajes.get("cliente.cancelar.titulo"));
+		dialogo.setHeaderText(Mensajes.get("cliente.cancelar.pregunta"));
+		dialogo.setContentText(Mensajes.get("cliente.cancelar.motivo"));
 		Optional<String> respuesta = dialogo.showAndWait();
 
 		if (respuesta.isEmpty()) {
@@ -353,7 +293,7 @@ public class PanelClienteController {
 			return; // cerro el dialogo: el viaje sigue
 		}
 
-		String motivo = respuesta.get().isBlank() ? "Cancelado por el cliente" : respuesta.get().trim();
+		String motivo = respuesta.get().isBlank() ? Mensajes.get("cliente.motivoPorDefecto") : respuesta.get().trim();
 
 		try {
 
@@ -361,7 +301,7 @@ public class PanelClienteController {
 
 		} catch (IllegalStateException ex) {
 
-			Alertas.advertencia("No se pudo cancelar", ex.getMessage());
+			Alertas.advertencia(Mensajes.get("cliente.noSePudoCancelar.titulo"), ex.getMessage());
 		}
 	}
 
@@ -413,8 +353,8 @@ public class PanelClienteController {
 
 			if (estado == EstadoViaje.RECHAZADO) {
 
-				Alertas.informacion("Reserva rechazada",
-						"Ningun conductor tomo el viaje a tiempo. La reserva fue rechazada.");
+				Alertas.informacion(Mensajes.get("cliente.reservaRechazada.titulo"),
+						Mensajes.get("cliente.sinRespuesta"));
 			}
 		}
 
@@ -432,7 +372,7 @@ public class PanelClienteController {
 
 		} catch (RutaNoDisponibleException | IllegalStateException ex) {
 
-			txtAreaEstado.appendText("\nNo se pudo recalcular la ruta del conductor asignado: " + ex.getMessage());
+			txtAreaEstado.appendText("\n" + Mensajes.get("cliente.errorReplanificar", ex.getMessage()));
 		}
 	}
 
@@ -445,7 +385,7 @@ public class PanelClienteController {
 
 	private String descripcion(RutaCalculada ruta) {
 
-		return String.format(Locale.ROOT, "%.2f km, %.0f min", ruta.distanciaKm(), ruta.duracionMinutos());
+		return Mensajes.get("cliente.kmMin", ruta.distanciaKm(), ruta.duracionMinutos());
 	}
 
 	private void mostrarEstado(Viaje viaje) {
@@ -463,7 +403,7 @@ public class PanelClienteController {
 
 		for (RegistroViaje registro : registros) {
 
-			sb.append(registro.getFechaHora().format(HORA)).append("  ").append(registro.getEstadoViaje()).append('\n');
+			sb.append(registro.getFechaHora().format(HORA)).append("  ").append(Mensajes.get("estado." + registro.getEstadoViaje().name())).append('\n');
 		}
 
 		Usuario conductor = viaje.getConductor();
@@ -471,16 +411,16 @@ public class PanelClienteController {
 
 		if (conductor != null && vehiculo != null) {
 
-			sb.append("Conductor: ").append(conductor.getNombre()).append(" - ").append(vehiculo.getModelo())
-					.append(" (").append(vehiculo.getPatente()).append(")\n");
+			sb.append(Mensajes.get("cliente.conductorAsignado", conductor.getNombre(), vehiculo.getModelo(),
+					vehiculo.getPatente())).append('\n');
 		}
 
 		EstadoViaje estado = viaje.estadoActual();
-		sb.append("Estado actual: ").append(estado).append(" - ").append(descripcion(estado));
+		sb.append(Mensajes.get("cliente.estadoActual", Mensajes.get("estado." + estado.name()), descripcion(estado)));
 
 		if (estado == EstadoViaje.CANCELADO && motivo != null) {
 
-			sb.append("\nMotivo: ").append(motivo);
+			sb.append("\n").append(Mensajes.get("cliente.motivo", motivo));
 		}
 
 		txtAreaEstado.setText(sb.toString());
@@ -488,14 +428,7 @@ public class PanelClienteController {
 
 	private String descripcion(EstadoViaje estado) {
 
-		return switch (estado) {
-			case SOLICITADO -> "buscando conductor";
-			case ACEPTADO -> "el conductor va hacia tu origen";
-			case INICIADO -> "viaje en curso hacia el destino";
-			case FINALIZADO -> "llegaste a destino";
-			case CANCELADO -> "viaje cancelado";
-			case RECHAZADO -> "no hubo conductor disponible";
-		};
+		return Mensajes.get("estado.desc." + estado.name());
 	}
 
 	// ------------------------------------------------------------------ sesion
@@ -506,7 +439,7 @@ public class PanelClienteController {
 		visualizador.detenerAnimacion();
 		contexto.setObservadorViajes(null);
 		contexto.cerrarSesion(); // detiene los hilos y cancela el viaje en curso
-		VistasFX.mostrar((Stage) btnCerrarSesion.getScene().getWindow(), "Login.fxml", "Movilidad Digital - Ingreso",
+		VistasFX.mostrar((Stage) btnCerrarSesion.getScene().getWindow(), "Login.fxml", Mensajes.get("ventana.login"),
 				contexto);
 	}
 

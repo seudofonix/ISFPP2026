@@ -23,14 +23,18 @@ import modelo.ConfiguracionSimulacion;
 import datos.CargarParametros;
 import datos.Datos;
 import modelo.GestorViajes;
+import logica.Asignacion;
 import logica.Movilidad;
+import logica.PlanificacionViajeService;
 import rutas.api.Geocodificador;
 import rutas.api.PlanificadorRutas;
+import rutas.api.RutasViaje;
 import rutas.impl.GeocodificadorOsm;
 import rutas.impl.PlanificadorRutasFactory;
 import servicio.Servicio;
 import simulacion.GeneradorUbicacionesViales;
 import simulacion.InicializadorEscenario;
+import ubicacion.Ubicacion;
 import usuario.EstadoConductor;
 import usuario.RolUsuario;
 import usuario.Usuario;
@@ -126,10 +130,10 @@ public class ContextoAplicacion implements AutoCloseable {
 		InicializadorEscenario.inicializar(usuarios, generadorUbicaciones);
 	}
 
-	/** Texto para mostrar de donde se cargaron los datos (segun config.properties). */
-	public String getOrigenDatos() {
+	/** Origen de los datos segun config.properties: "bd" (base PostgreSQL) o "archivo" (archivos de texto). */
+	public String getOrigen() {
 
-		return "bd".equals(CargarParametros.getOrigen()) ? "base de datos PostgreSQL" : "archivos de texto";
+		return CargarParametros.getOrigen();
 	}
 
 	public List<Usuario> getUsuarios() {
@@ -161,6 +165,12 @@ public class ContextoAplicacion implements AutoCloseable {
 	public Geocodificador getGeocodificador() {
 
 		return geocodificador;
+	}
+
+	/** Punto al azar sobre una calle del area de simulacion (para interfaces sin mapa donde hacer clic). */
+	public Ubicacion generarUbicacionAleatoria() {
+
+		return generadorUbicaciones.generar();
 	}
 
 	/** Busca un usuario por su email (sin distinguir mayusculas). */
@@ -223,6 +233,59 @@ public class ContextoAplicacion implements AutoCloseable {
 		gestor.iniciar(conductoresSimulados,
 				new ConfiguracionSimulacion(CargarParametros.getSegundosTramo(), CargarParametros.getPasosTramo(),
 						CargarParametros.getEsperaMaximaSegundos(), CargarParametros.getCapacidadBandeja()));
+	}
+
+	/** Que paso con un pedido de viaje. */
+	public enum Resultado {
+		/** El viaje quedo en la cola y lo toma un conductor simulado. */
+		ACEPTADA,
+		/** No habia ningun conductor disponible para el servicio: la reserva se rechazo al instante. */
+		SIN_CONDUCTORES,
+		/** Las bandejas de los conductores estan llenas: el viaje se cancelo y hay que reintentar. */
+		COLA_LLENA
+	}
+
+	/**
+	 * Resultado de pedirViaje. rutas y vehiculo solo estan cuando el pedido fue ACEPTADA (vehiculo es el
+	 * conductor elegido por cercania; otro conductor puede terminar tomando el viaje).
+	 */
+	public record SolicitudViaje(Resultado resultado, Viaje viaje, RutasViaje rutas, Vehiculo vehiculo) {
+	}
+
+	/**
+	 * Pide un viaje para el cliente: elige el conductor disponible y compatible mas cercano, planifica los dos
+	 * tramos viales, crea y solicita el viaje y lo deja en la cola. Si no hay conductor disponible lo rechaza al
+	 * instante. Es la misma regla para cualquier interfaz (JavaFX o consola).
+	 *
+	 * @throws rutas.api.RutaNoDisponibleException si no hay camino entre los puntos (no se crea ningun viaje)
+	 * @throws IllegalStateException si el cliente ya tiene un viaje activo
+	 */
+	public SolicitudViaje pedirViaje(Usuario cliente, Servicio servicio, Ubicacion origen, Ubicacion destino) {
+
+		Optional<Asignacion> asignacion = Movilidad.seleccionarConductor(conductoresSimulados, servicio, origen);
+
+		if (asignacion.isEmpty()) {
+
+			Viaje rechazado = new Viaje(cliente, origen, destino, servicio);
+			rechazado.solicitar(LocalDateTime.now());
+			rechazarViaje(rechazado);
+			return new SolicitudViaje(Resultado.SIN_CONDUCTORES, rechazado, null, null);
+		}
+
+		// se planifica antes de pedir el viaje, asi un error vial no deja nada a medias
+		Vehiculo vehiculo = asignacion.get().vehiculo();
+		RutasViaje rutas = new PlanificacionViajeService(motorVial).planificar(vehiculo, origen, destino);
+
+		Viaje viaje = new Viaje(cliente, origen, destino, servicio);
+		viaje.solicitar(LocalDateTime.now());
+
+		if (!solicitarViaje(viaje)) {
+
+			viaje.cancelar(LocalDateTime.now(), cliente, "Sin capacidad");
+			return new SolicitudViaje(Resultado.COLA_LLENA, viaje, null, null);
+		}
+
+		return new SolicitudViaje(Resultado.ACEPTADA, viaje, rutas, vehiculo);
 	}
 
 	/**

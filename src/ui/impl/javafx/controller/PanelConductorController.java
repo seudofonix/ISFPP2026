@@ -10,6 +10,7 @@ package ui.impl.javafx.controller;
 import java.time.format.DateTimeFormatter;
 
 import aplicacion.ContextoAplicacion;
+import idioma.Mensajes;
 import javafx.beans.property.SimpleDoubleProperty;
 import javafx.beans.property.SimpleIntegerProperty;
 import javafx.beans.property.SimpleStringProperty;
@@ -78,11 +79,10 @@ public class PanelConductorController {
 
 		Usuario conductor = contexto.getUsuarioLogueado();
 
-		lblConductor.setText("Conductor: " + conductor.getNombre() + " (" + conductor.getEmail() + ")");
-		lblDetalle.setText("Licencia: " + conductor.getConductor().getLicenciaConducir() + "  |  Estado: "
-				+ conductor.getConductor().getEstadoConductor() + "  |  Vehiculos: "
-				+ String.join(", ", conductor.getConductor().getVehiculos().keySet()) + "  |  Datos: "
-				+ contexto.getOrigenDatos());
+		lblConductor.setText(Mensajes.get("conductor.titulo", conductor.getNombre(), conductor.getEmail()));
+		lblDetalle.setText(Mensajes.get("conductor.detalle", conductor.getConductor().getLicenciaConducir(),
+				conductor.getConductor().getEstadoConductor(),
+				String.join(", ", conductor.getConductor().getVehiculos().keySet()), contexto.getOrigen()));
 
 		configurarColumnas();
 
@@ -105,7 +105,7 @@ public class PanelConductorController {
 
 		contexto.cerrarSesion();
 
-		VistasFX.mostrar((Stage) btnCerrarSesion.getScene().getWindow(), "Login.fxml", "Movilidad Digital - Ingreso",
+		VistasFX.mostrar((Stage) btnCerrarSesion.getScene().getWindow(), "Login.fxml", Mensajes.get("ventana.login"),
 				contexto);
 	}
 
@@ -117,7 +117,7 @@ public class PanelConductorController {
 		colViaConductor.setCellValueFactory(c -> new SimpleStringProperty(
 				c.getValue().getConductor() == null ? "-" : c.getValue().getConductor().getNombre()));
 		colViaServicio.setCellValueFactory(c -> new SimpleStringProperty(c.getValue().getServicio().getNombre()));
-		colViaEstado.setCellValueFactory(c -> new SimpleStringProperty(String.valueOf(c.getValue().estadoActual())));
+		colViaEstado.setCellValueFactory(c -> new SimpleStringProperty(Mensajes.get("estado." + c.getValue().estadoActual().name())));
 		colViaHora.setCellValueFactory(c -> {
 			var registros = c.getValue().getRegistroViaje();
 			RegistroViaje ultimo = registros.isEmpty() ? null : registros.get(registros.size() - 1);

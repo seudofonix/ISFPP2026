@@ -11,11 +11,14 @@ import java.io.IOException;
 import java.util.Optional;
 
 import aplicacion.ContextoAplicacion;
+import idioma.Mensajes;
 import javafx.fxml.FXML;
 import javafx.scene.Node;
+import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
 import javafx.stage.Stage;
+import javafx.util.StringConverter;
 import ui.impl.javafx.VistasFX;
 import usuario.RolUsuario;
 import usuario.Usuario;
@@ -31,6 +34,7 @@ public class LoginController {
 	@FXML private Label lblSaludo;
 	@FXML private Label lblDetalle;
 	@FXML private Label lblEstado;
+	@FXML private ComboBox<String> cmbIdioma;
 
 	private Usuario identificado;
 
@@ -44,6 +48,39 @@ public class LoginController {
 
 		actualizarEstado();
 		mostrarPasoEmail();
+		prepararSelectorIdioma();
+	}
+
+	/** Combo con los idiomas disponibles; al elegir otro se recarga la pantalla en ese idioma. */
+	private void prepararSelectorIdioma() {
+
+		cmbIdioma.getItems().setAll(Mensajes.IDIOMAS);
+		cmbIdioma.setConverter(new StringConverter<>() {
+
+			@Override
+			public String toString(String codigo) {
+
+				return codigo == null ? "" : Mensajes.nombreDeIdioma(codigo);
+			}
+
+			@Override
+			public String fromString(String texto) {
+
+				return null;
+			}
+		});
+		cmbIdioma.setValue(Mensajes.getIdioma().getLanguage());
+		cmbIdioma.setOnAction(e -> {
+
+			String elegido = cmbIdioma.getValue();
+
+			if (elegido != null && !elegido.equals(Mensajes.getIdioma().getLanguage())) {
+
+				Mensajes.setIdioma(elegido);
+				VistasFX.mostrar((Stage) txtEmail.getScene().getWindow(), "Login.fxml", Mensajes.get("ventana.login"),
+						contexto);
+			}
+		});
 	}
 
 	/** Paso 1: busca el email escrito entre los usuarios cargados. */
@@ -54,7 +91,7 @@ public class LoginController {
 
 		if (email.isEmpty()) {
 
-			lblError.setText("Escribi tu email para continuar.");
+			lblError.setText(Mensajes.get("login.escribiEmail"));
 			return;
 		}
 
@@ -62,18 +99,18 @@ public class LoginController {
 
 		if (usuario.isEmpty()) {
 
-			lblError.setText("No existe ningun usuario con ese email.");
+			lblError.setText(Mensajes.get("login.mailDesconocido"));
 			return;
 		}
 
 		identificado = usuario.get();
 		lblError.setText("");
-		lblSaludo.setText("Hola, " + identificado.getNombre() + " (" + identificado.getEmail() + ")");
+		lblSaludo.setText(Mensajes.get("login.hola", identificado.getNombre(), identificado.getEmail()));
 		panelEmail.setVisible(false);
 		panelEmail.setManaged(false);
 		panelRol.setVisible(true);
 		panelRol.setManaged(true);
-		lblDetalle.setText("Telefono: " + identificado.getTelefono());
+		lblDetalle.setText(Mensajes.get("login.telefono", identificado.getTelefono()));
 	}
 
 	@FXML
@@ -93,7 +130,7 @@ public class LoginController {
 
 		if (identificado == null || identificado.getConductor() == null) {
 
-			Alertas.error("No se pudo ingresar", "Este mail no pertenece a un conductor.");
+			Alertas.error(Mensajes.get("login.noSePudoIngresarTitulo"), Mensajes.get("login.noEsConductor"));
 			return;
 		}
 
@@ -110,8 +147,8 @@ public class LoginController {
 
 		} catch (IOException | RuntimeException ex) {
 
-			lblEstado.setText("Error al cargar los datos desde " + contexto.getOrigenDatos());
-			Alertas.error("No se pudieron cargar los datos", ex.getMessage());
+			lblEstado.setText(Mensajes.get("login.errorCarga", contexto.getOrigen()));
+			Alertas.error(Mensajes.get("login.errorCargaTitulo"), ex.getMessage());
 		}
 
 		mostrarPasoEmail(); // los objetos se crearon de nuevo: hay que identificarse otra vez
@@ -130,7 +167,7 @@ public class LoginController {
 
 		} catch (IllegalStateException | IllegalArgumentException ex) {
 
-			Alertas.error("No se pudo ingresar", ex.getMessage());
+			Alertas.error(Mensajes.get("login.noSePudoIngresarTitulo"), ex.getMessage());
 			return;
 		}
 
@@ -138,11 +175,11 @@ public class LoginController {
 
 		if (rol == RolUsuario.CONDUCTOR) {
 
-			VistasFX.mostrar(escenario, "PanelConductor.fxml", "Movilidad Digital - Conductor", contexto);
+			VistasFX.mostrar(escenario, "PanelConductor.fxml", Mensajes.get("ventana.conductor"), contexto);
 
 		} else {
 
-			VistasFX.mostrar(escenario, "PanelCliente.fxml", "Movilidad Digital - Usuario", contexto);
+			VistasFX.mostrar(escenario, "PanelCliente.fxml", Mensajes.get("ventana.usuario"), contexto);
 		}
 	}
 
@@ -161,8 +198,7 @@ public class LoginController {
 
 	private void actualizarEstado() {
 
-		lblEstado.setText("Datos cargados desde " + contexto.getOrigenDatos() + ": " + contexto.getUsuarios().size()
-				+ " usuarios, " + contexto.getVehiculos().size() + " vehiculos, " + contexto.getServicios().size()
-				+ " servicios");
+		lblEstado.setText(Mensajes.get("login.estadoDatos", contexto.getOrigen(), contexto.getUsuarios().size(),
+				contexto.getVehiculos().size(), contexto.getServicios().size()));
 	}
 }

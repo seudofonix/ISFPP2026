@@ -15,6 +15,7 @@ import java.util.Locale;
 import java.util.Objects;
 
 import datos.CargarParametros;
+import idioma.Mensajes;
 import javafx.application.Platform;
 import javafx.concurrent.Worker;
 import javafx.scene.web.WebEngine;
@@ -52,6 +53,7 @@ public final class VisualizadorRutasLeaflet implements VisualizadorMapa {
 
 				paginaLista = true;
 				conectarPuente();
+				ejecutarDirecto("window.configurarTextos(" + textosJson() + ");");
 				ejecutarDirecto(String.format(Locale.ROOT, "window.configurarVistaInicial(%f, %f, %d);",
 						CargarParametros.getMapaCentroLatitud(), CargarParametros.getMapaCentroLongitud(),
 						CargarParametros.getMapaZoom()));
@@ -205,6 +207,22 @@ public final class VisualizadorRutasLeaflet implements VisualizadorMapa {
 	 * Estructura que recibe mapa.html: acercamiento y traslado (listas de [lat, lon]) y tres puntos. Leaflet espera
 	 * cada coordenada en el orden [latitud, longitud].
 	 */
+	/** Textos del mapa en el idioma actual, como objeto JSON para window.configurarTextos. */
+	private static String textosJson() {
+
+		String[] claves = { "origen", "destino", "conductor", "elegirOrigen", "elegirDestino", "tilesFallidas",
+				"fondoActualizado", "cargando", "reintentar", "esperar" };
+		StringBuilder sb = new StringBuilder("{");
+
+		for (int i = 0; i < claves.length; i++) {
+
+			String texto = Mensajes.get("mapa." + claves[i]).replace("\\", "\\\\").replace("\"", "\\\"");
+			sb.append(i > 0 ? "," : "").append('"').append(claves[i]).append("\":\"").append(texto).append('"');
+		}
+
+		return sb.append('}').toString();
+	}
+
 	private String aJson(RutasViaje rutas, Ubicacion conductor, Ubicacion origen, Ubicacion destino) {
 
 		return "{\"acercamiento\":" + geometria(rutas.haciaOrigen()) + ",\"traslado\":"

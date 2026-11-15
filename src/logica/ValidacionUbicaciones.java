@@ -7,9 +7,8 @@
  */
 package logica;
 
-import java.util.Locale;
-
 import datos.CargarParametros;
+import idioma.Mensajes;
 import rutas.api.PlanificadorRutas;
 import ubicacion.Ubicacion;
 
@@ -28,7 +27,7 @@ public final class ValidacionUbicaciones {
 
 		if (candidata == null) {
 
-			throw new IllegalArgumentException("Falta la ubicacion.");
+			throw new IllegalArgumentException(Mensajes.get("error.faltaUbicacion"));
 		}
 
 		validarArea(candidata);
@@ -36,7 +35,7 @@ public final class ValidacionUbicaciones {
 		double tolerancia = CargarParametros.getToleranciaAjusteMetros();
 
 		return motor.ajustarACalle(candidata, tolerancia).orElseThrow(() -> new IllegalArgumentException(
-				String.format(Locale.ROOT, "No hay una calle transitable a menos de %.0f m de ese punto.", tolerancia)));
+				Mensajes.get("error.sinCalle", tolerancia)));
 	}
 
 	/** @throws IllegalArgumentException si el punto cae fuera del rectangulo de simulacion */
@@ -52,9 +51,7 @@ public final class ValidacionUbicaciones {
 
 		if (!dentro) {
 
-			throw new IllegalArgumentException(String.format(Locale.ROOT,
-					"El punto esta fuera del area de simulacion (latitud %.3f a %.3f, longitud %.3f a %.3f).", latMin,
-					latMax, lonMin, lonMax));
+			throw new IllegalArgumentException(Mensajes.get("error.fueraDeArea", latMin, latMax, lonMin, lonMax));
 		}
 	}
 }
