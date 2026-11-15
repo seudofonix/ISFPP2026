@@ -25,7 +25,7 @@ public final class Formato {
 
 	/** Una fila del registro de viajes (todo ya convertido a texto, en el idioma actual). */
 	public record FilaRegistro(String id, String cliente, String servicio, String origen, String destino,
-			String estado, String fecha, String calificacion) {
+			String estado, String fecha, String calificacion, String comentario) {
 	}
 
 	/** "★★★★☆" para 4 de 5; "-" si todavia no se califico. */
@@ -61,7 +61,7 @@ public final class Formato {
 				contexto.getGeocodificador().direccion(v.getOrigen()),
 				contexto.getGeocodificador().direccion(v.getDestino()),
 				Mensajes.get("estado." + v.estadoActual().name()), fecha(v),
-				estrellas(v.getCalificacionConductor()))).toList();
+				estrellas(v.getCalificacionConductor()), v.getComentarioCalificacion().replaceAll("\\s+", " "))).toList();
 	}
 
 	/** Promedio de las calificaciones recibidas, o -1 si ninguno de los viajes fue calificado. */

@@ -27,6 +27,8 @@ import javafx.scene.control.ButtonBar;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.Dialog;
 import javafx.scene.control.RadioButton;
+import javafx.scene.control.TextArea;
+import javafx.scene.control.TextFormatter;
 import javafx.scene.control.ToggleGroup;
 import javafx.scene.layout.VBox;
 import javafx.scene.control.ComboBox;
@@ -338,11 +340,11 @@ public class PanelClienteController {
 				replanificar(viaje);
 			}
 
-			visualizador.animarConductor("acercamiento", CargarParametros.getSegundosTramo());
+			visualizador.animarConductor("acercamiento", contexto.segundosDelTramo(viaje, EstadoViaje.ACEPTADO));
 
 		} else if (estado == EstadoViaje.INICIADO) {
 
-			visualizador.animarConductor("traslado", CargarParametros.getSegundosTramo());
+			visualizador.animarConductor("traslado", contexto.segundosDelTramo(viaje, EstadoViaje.INICIADO));
 		}
 
 		if (estado == EstadoViaje.FINALIZADO || estado == EstadoViaje.CANCELADO || estado == EstadoViaje.RECHAZADO) {
@@ -389,6 +391,7 @@ public class PanelClienteController {
 		Usuario conductor = viaje.getConductor();
 		String nombre = conductor == null ? "" : conductor.getNombre();
 		CalificacionViaje elegida = null;
+		String comentario = "";
 
 		while (elegida == null) {
 
@@ -413,17 +416,27 @@ public class PanelClienteController {
 				opciones.getChildren().add(opcion);
 			}
 
+			// casilla de comentario opcional, limitada al largo que acepta el modelo
+			TextArea casillaComentario = new TextArea();
+			casillaComentario.setPromptText(Mensajes.get("cliente.calificar.comentario"));
+			casillaComentario.setPrefRowCount(3);
+			casillaComentario.setWrapText(true);
+			casillaComentario.setTextFormatter(new TextFormatter<String>(
+					cambio -> cambio.getControlNewText().length() <= Viaje.MAX_COMENTARIO ? cambio : null));
+			opciones.getChildren().add(casillaComentario);
+
 			grupo.selectedToggleProperty().addListener((obs, a, b) -> botonEnviar.setDisable(b == null));
 			dialogo.getDialogPane().setContent(opciones);
 			dialogo.setResultConverter(boton -> grupo.getSelectedToggle() == null ? null
 					: (CalificacionViaje) grupo.getSelectedToggle().getUserData());
 
 			elegida = dialogo.showAndWait().orElse(null);
+			comentario = casillaComentario.getText();
 		}
 
 		try {
 
-			contexto.calificarViaje(viaje, elegida);
+			contexto.calificarViaje(viaje, elegida, comentario);
 			mostrarEstado(viaje);
 
 		} catch (IllegalStateException | IllegalArgumentException ex) {
@@ -493,6 +506,11 @@ public class PanelClienteController {
 
 			sb.append("\n").append(Mensajes.get("cliente.calificacion",
 					Formato.calificacionConNombre(viaje.getCalificacionConductor())));
+
+			if (!viaje.getComentarioCalificacion().isEmpty()) {
+
+				sb.append("\n").append(Mensajes.get("cliente.comentario", viaje.getComentarioCalificacion()));
+			}
 		}
 
 		if (estado == EstadoViaje.CANCELADO && motivo != null) {

@@ -37,6 +37,10 @@ public class Viaje {
 
 	private Vehiculo vehiculo;
 
+	/** Largo maximo del comentario con que el cliente acompana su calificacion. */
+	public static final int MAX_COMENTARIO = 300;
+
+	private String comentarioCalificacion = "";
 	private CalificacionViaje calificacionConductor = CalificacionViaje.NO_CALIFICADO;
 	private CalificacionViaje calificacionCliente = CalificacionViaje.NO_CALIFICADO;
 
@@ -195,6 +199,23 @@ public class Viaje {
 	 */
 	public synchronized void calificarConductor(CalificacionViaje calificacion) {
 
+		calificarConductor(calificacion, null);
+	}
+
+	/**
+	 * El cliente califica al conductor y, si quiere, deja un comentario (opcional, hasta MAX_COMENTARIO caracteres).
+	 *
+	 * @throws IllegalStateException    si el viaje no esta finalizado o ya fue calificado
+	 * @throws IllegalArgumentException si la calificacion es nula o NO_CALIFICADO, o el comentario es demasiado largo
+	 */
+	public synchronized void calificarConductor(CalificacionViaje calificacion, String comentario) {
+
+		String limpio = comentario == null ? "" : comentario.trim();
+
+		if (limpio.length() > MAX_COMENTARIO) {
+			throw new IllegalArgumentException("El comentario puede tener hasta " + MAX_COMENTARIO + " caracteres.");
+		}
+
 		if (calificacion == null || calificacion == CalificacionViaje.NO_CALIFICADO) {
 			throw new IllegalArgumentException("Hay que elegir una calificacion de 1 a 5.");
 		}
@@ -204,6 +225,13 @@ public class Viaje {
 		}
 
 		this.calificacionConductor = calificacion;
+		this.comentarioCalificacion = limpio;
+	}
+
+	/** Comentario que dejo el cliente al calificar; cadena vacia si no escribio ninguno. */
+	public synchronized String getComentarioCalificacion() {
+
+		return comentarioCalificacion;
 	}
 
 	/**

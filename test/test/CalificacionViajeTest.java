@@ -109,4 +109,19 @@ class CalificacionViajeTest {
 		viaje.calificarConductor(CalificacionViaje.EXCELENTE);
 		assertEquals(5.0, Formato.promedio(java.util.List.of(viaje)), 1e-9);
 	}
+
+	@Test
+	void elComentarioEsOpcionalSeLimpiaYTieneLargoMaximo() {
+
+		finalizar();
+
+		assertEquals("", viaje.getComentarioCalificacion());
+		assertThrows(IllegalArgumentException.class,
+				() -> viaje.calificarConductor(CalificacionViaje.BUENO, "x".repeat(Viaje.MAX_COMENTARIO + 1)));
+		assertTrue(viaje.requiereCalificacion(), "un comentario invalido no consume la calificacion");
+
+		viaje.calificarConductor(CalificacionViaje.BUENO, "  Llego rapido  ");
+
+		assertEquals("Llego rapido", viaje.getComentarioCalificacion());
+	}
 }

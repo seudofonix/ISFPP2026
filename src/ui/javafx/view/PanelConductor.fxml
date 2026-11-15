@@ -56,6 +56,7 @@
                                           <TableColumn fx:id="colRegEstado" prefWidth="100.0" text="%tabla.estado" />
                                           <TableColumn fx:id="colRegFecha" prefWidth="130.0" text="%tabla.fecha" />
                                           <TableColumn fx:id="colRegCalificacion" prefWidth="110.0" text="%tabla.calificacion" />
+                                          <TableColumn fx:id="colRegComentario" prefWidth="260.0" text="%tabla.comentario" />
                            </columns>
                         </TableView>
                      </children>

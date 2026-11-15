@@ -38,6 +38,8 @@ public class GestorViajes {
 
 	private ScheduledExecutorService expirador;
 	private ConfiguracionSimulacion configuracion;
+	/** Opcional: duracion de cada tramo segun el viaje; si es null todos duran segundosTramo. */
+	private volatile CalculadorDuracionTramo calculadorTramo;
 	private volatile boolean activo;
 
 	/**
@@ -46,6 +48,12 @@ public class GestorViajes {
 	public GestorViajes(Consumer<Viaje> alCambiar) {
 
 		this.alCambiar = alCambiar;
+	}
+
+	/** Define como se calcula la duracion de cada tramo (null = todos duran segundosTramo). */
+	public void setCalculadorDuracionTramo(CalculadorDuracionTramo calculador) {
+
+		this.calculadorTramo = calculador;
 	}
 
 	/**
@@ -228,8 +236,23 @@ public class GestorViajes {
 
 	private boolean avanzar(Viaje viaje, EstadoViaje esperado) {
 
-		long pasoMs = Math.max(1,
-				(long) (configuracion.segundosTramo() * 1000 / configuracion.pasosTramo()));
+		double segundos = configuracion.segundosTramo();
+		CalculadorDuracionTramo calculador = calculadorTramo;
+
+		if (calculador != null) {
+
+			try {
+
+				double calculados = calculador.segundos(viaje, esperado);
+				segundos = calculados > 0 ? calculados : segundos;
+
+			} catch (RuntimeException ex) {
+
+				// si no se puede calcular, el tramo dura lo configurado
+			}
+		}
+
+		long pasoMs = Math.max(1, (long) (segundos * 1000 / configuracion.pasosTramo()));
 
 		for (int paso = 1; paso <= configuracion.pasosTramo(); paso++) {
 

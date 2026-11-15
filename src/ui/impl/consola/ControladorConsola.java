@@ -246,8 +246,14 @@ public class ControladorConsola {
 					throw new NumberFormatException();
 				}
 
-				contexto.calificarViaje(viaje, CalificacionViaje.values()[valor]);
+				String comentario = pedirComentario();
+				contexto.calificarViaje(viaje, CalificacionViaje.values()[valor], comentario);
 				vista.mostrar(Mensajes.get("cliente.calificacion", Formato.calificacionConNombre(viaje.getCalificacionConductor())));
+
+				if (!viaje.getComentarioCalificacion().isEmpty()) {
+
+					vista.mostrar(Mensajes.get("cliente.comentario", viaje.getComentarioCalificacion()));
+				}
 
 			} catch (NumberFormatException e) {
 
@@ -258,6 +264,22 @@ public class ControladorConsola {
 		}
 
 		return true;
+	}
+
+	/** Pide el comentario opcional de la calificacion (Enter para omitirlo) hasta que entre en el largo permitido. */
+	private String pedirComentario() {
+
+		while (true) {
+
+			String comentario = vista.leer(Mensajes.get("consola.pedirComentario"));
+
+			if (comentario == null || comentario.length() <= Viaje.MAX_COMENTARIO) {
+
+				return comentario == null ? "" : comentario;
+			}
+
+			vista.mostrar(Mensajes.get("consola.comentarioLargo", Viaje.MAX_COMENTARIO));
+		}
 	}
 
 	private void solicitarViaje(Usuario usuario) {
@@ -526,10 +548,11 @@ public class ControladorConsola {
 		vista.mostrar(Mensajes.get("consola.registroTitulo"));
 		vista.mostrarTabla(List.of(Mensajes.get("tabla.id"), Mensajes.get("tabla.cliente"),
 				Mensajes.get("tabla.servicio"), Mensajes.get("tabla.origen"), Mensajes.get("tabla.destino"),
-				Mensajes.get("tabla.estado"), Mensajes.get("tabla.fecha"), Mensajes.get("tabla.calificacion")),
+				Mensajes.get("tabla.estado"), Mensajes.get("tabla.fecha"), Mensajes.get("tabla.calificacion"),
+				Mensajes.get("tabla.comentario")),
 				Formato.registroDeConductor(contexto, viajes).stream()
 						.map(f -> List.of(f.id(), f.cliente(), f.servicio(), f.origen(), f.destino(), f.estado(),
-								f.fecha(), f.calificacion()))
+								f.fecha(), f.calificacion(), f.comentario()))
 						.toList());
 		vista.mostrar(Mensajes.get("conductor.resumen", viajes.size(),
 				promedio < 0 ? "-" : String.format(Locale.ROOT, "%.2f", promedio)));

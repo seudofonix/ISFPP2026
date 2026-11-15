@@ -71,6 +71,7 @@ public class PanelConductorController {
 	@FXML private TableColumn<Formato.FilaRegistro, String> colRegEstado;
 	@FXML private TableColumn<Formato.FilaRegistro, String> colRegFecha;
 	@FXML private TableColumn<Formato.FilaRegistro, String> colRegCalificacion;
+	@FXML private TableColumn<Formato.FilaRegistro, String> colRegComentario;
 	@FXML private TableColumn<Viaje, String> colViaHora;
 
 	@FXML private TableView<Servicio> tablaServicios;
@@ -146,6 +147,7 @@ public class PanelConductorController {
 		colRegEstado.setCellValueFactory(c -> new SimpleStringProperty(c.getValue().estado()));
 		colRegFecha.setCellValueFactory(c -> new SimpleStringProperty(c.getValue().fecha()));
 		colRegCalificacion.setCellValueFactory(c -> new SimpleStringProperty(c.getValue().calificacion()));
+		colRegComentario.setCellValueFactory(c -> new SimpleStringProperty(c.getValue().comentario()));
 		tablaRegistro.setPlaceholder(new Label(Mensajes.get("conductor.sinViajes")));
 	}
 

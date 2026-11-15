@@ -25,10 +25,12 @@ import datos.Datos;
 import modelo.GestorViajes;
 import idioma.Mensajes;
 import logica.Asignacion;
+import logica.DuracionTramos;
 import logica.Movilidad;
 import logica.PlanificacionViajeService;
 import rutas.api.Geocodificador;
 import rutas.api.PlanificadorRutas;
+import rutas.api.RutaNoDisponibleException;
 import rutas.api.RutasViaje;
 import rutas.impl.GeocodificadorOsm;
 import rutas.impl.PlanificadorRutasFactory;
@@ -169,10 +171,10 @@ public class ContextoAplicacion implements AutoCloseable {
 		return geocodificador;
 	}
 
-	/** El cliente califica al conductor de un viaje finalizado (obligatorio antes de pedir otro viaje). */
-	public void calificarViaje(Viaje viaje, CalificacionViaje calificacion) {
+	/** El cliente califica al conductor de un viaje finalizado, con comentario opcional (obligatorio antes de pedir otro viaje). */
+	public void calificarViaje(Viaje viaje, CalificacionViaje calificacion, String comentario) {
 
-		viaje.calificarConductor(calificacion);
+		viaje.calificarConductor(calificacion, comentario);
 	}
 
 	/** Punto al azar sobre una calle del area de simulacion (para interfaces sin mapa donde hacer clic). */
@@ -238,9 +240,40 @@ public class ContextoAplicacion implements AutoCloseable {
 		conductoresSimulados = Movilidad.elegirConductoresSimulados(usuarios, servicios, usuarioLogueado,
 				CargarParametros.getMaximoConductores());
 
+		gestor.setCalculadorDuracionTramo(this::segundosDelTramo);
 		gestor.iniciar(conductoresSimulados,
 				new ConfiguracionSimulacion(CargarParametros.getSegundosTramo(), CargarParametros.getPasosTramo(),
 						CargarParametros.getEsperaMaximaSegundos(), CargarParametros.getCapacidadBandeja()));
+	}
+
+	/**
+	 * Segundos simulados que dura un tramo del viaje, con la misma velocidad en los dos: el traslado
+	 * (INICIADO, origen -> destino) dura simulacion.segundos.tramo y la recogida (ACEPTADO, conductor -> origen)
+	 * dura lo que corresponde a su distancia a esa velocidad. Lo usan el gestor de viajes (la espera) y la
+	 * pantalla (la animacion del conductor), asi nunca se desincronizan.
+	 */
+	public double segundosDelTramo(Viaje viaje, EstadoViaje tramo) {
+
+		double base = CargarParametros.getSegundosTramo();
+
+		if (tramo != EstadoViaje.ACEPTADO || viaje.getVehiculo() == null) {
+
+			return base;
+		}
+
+		RutasViaje rutas;
+
+		try {
+
+			rutas = new PlanificacionViajeService(motorVial).planificar(viaje.getVehiculo(), viaje.getOrigen(),
+					viaje.getDestino());
+
+		} catch (RutaNoDisponibleException | IllegalStateException ex) {
+
+			return base; // sin ruta no hay distancia: se usa la demora configurada
+		}
+
+		return DuracionTramos.recogida(rutas.haciaOrigen().distanciaKm(), rutas.haciaDestino().distanciaKm(), base);
 	}
 
 	/** Que paso con un pedido de viaje. */

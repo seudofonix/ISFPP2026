@@ -180,10 +180,11 @@ class ConsolaTest {
 
 		Viaje viaje = viajeFinalizado();
 
-		String salida = correr("cliente@x.com", "1", "9", "abc", "0", "4", "0", "0", "0");
+		String salida = correr("cliente@x.com", "1", "9", "abc", "0", "4", "Muy amable", "0", "0", "0");
 
 		assertTrue(salida.contains("Tenés que elegir un número del 1 al 5."), salida);
 		assertEquals(CalificacionViaje.MUY_BUENO, viaje.getCalificacionConductor());
+		assertEquals("Muy amable", viaje.getComentarioCalificacion());
 		assertTrue(salida.contains("Menú de usuario"), "recien con la nota se llega al menu");
 	}
 
@@ -201,13 +202,14 @@ class ConsolaTest {
 	void elConductorVePrimeroElRegistroDeSusViajesConLaNota() {
 
 		Viaje viaje = viajeFinalizado();
-		viaje.calificarConductor(CalificacionViaje.MUY_BUENO);
+		viaje.calificarConductor(CalificacionViaje.MUY_BUENO, "Excelente trato");
 
 		String salida = correr("c1@x.com", "2", "0", "0", "0");
 
 		int registro = salida.indexOf("--- Viajes realizados ---");
 		assertTrue(registro >= 0 && registro < salida.indexOf("Menú de conductor"), salida);
 		assertTrue(salida.contains("★★★★☆"), salida);
+		assertTrue(salida.contains("Excelente trato"), salida);
 		assertTrue(salida.contains("Cliente"), salida);
 		assertTrue(salida.contains("Calificación promedio: 4.00"), salida);
 	}
