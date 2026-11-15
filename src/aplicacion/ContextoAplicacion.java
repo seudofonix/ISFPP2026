@@ -23,6 +23,7 @@ import modelo.ConfiguracionSimulacion;
 import datos.CargarParametros;
 import datos.Datos;
 import modelo.GestorViajes;
+import idioma.Mensajes;
 import logica.Asignacion;
 import logica.Movilidad;
 import logica.PlanificacionViajeService;
@@ -40,6 +41,7 @@ import usuario.RolUsuario;
 import usuario.Usuario;
 import vehiculo.Vehiculo;
 import viajes.EstadoViaje;
+import viajes.CalificacionViaje;
 import viajes.Viaje;
 
 public class ContextoAplicacion implements AutoCloseable {
@@ -167,6 +169,12 @@ public class ContextoAplicacion implements AutoCloseable {
 		return geocodificador;
 	}
 
+	/** El cliente califica al conductor de un viaje finalizado (obligatorio antes de pedir otro viaje). */
+	public void calificarViaje(Viaje viaje, CalificacionViaje calificacion) {
+
+		viaje.calificarConductor(calificacion);
+	}
+
 	/** Punto al azar sobre una calle del area de simulacion (para interfaces sin mapa donde hacer clic). */
 	public Ubicacion generarUbicacionAleatoria() {
 
@@ -258,9 +266,14 @@ public class ContextoAplicacion implements AutoCloseable {
 	 * instante. Es la misma regla para cualquier interfaz (JavaFX o consola).
 	 *
 	 * @throws rutas.api.RutaNoDisponibleException si no hay camino entre los puntos (no se crea ningun viaje)
-	 * @throws IllegalStateException si el cliente ya tiene un viaje activo
+	 * @throws IllegalStateException si el cliente ya tiene un viaje activo o le falta calificar su ultimo viaje
 	 */
 	public SolicitudViaje pedirViaje(Usuario cliente, Servicio servicio, Ubicacion origen, Ubicacion destino) {
+
+		if (cliente.getCliente().viajePendienteDeCalificacion().isPresent()) {
+
+			throw new IllegalStateException(Mensajes.get("cliente.calificacionPendiente"));
+		}
 
 		Optional<Asignacion> asignacion = Movilidad.seleccionarConductor(conductoresSimulados, servicio, origen);
 

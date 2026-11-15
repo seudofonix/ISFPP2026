@@ -23,10 +23,12 @@ import rutas.api.RutaNoDisponibleException;
 import rutas.api.RutasViaje;
 import servicio.Servicio;
 import ubicacion.Ubicacion;
+import ui.Formato;
 import usuario.Cliente;
 import usuario.RolUsuario;
 import usuario.Usuario;
 import vehiculo.Vehiculo;
+import viajes.CalificacionViaje;
 import viajes.EstadoViaje;
 import viajes.Viaje;
 
@@ -174,6 +176,11 @@ public class ControladorConsola {
 
 		while (true) {
 
+			if (!exigirCalificacion(usuario)) {
+
+				return false;
+			}
+
 			vista.mostrar(Mensajes.get("consola.menuCliente"));
 			String opcion = vista.leer(Mensajes.get("consola.opcion"));
 
@@ -208,6 +215,49 @@ public class ControladorConsola {
 				vista.mostrar(Mensajes.get("consola.opcionInvalida"));
 			}
 		}
+	}
+
+	/**
+	 * Si el ultimo viaje termino y no esta calificado, pide la calificacion hasta recibir un valor de 1 a 5.
+	 *
+	 * @return false si se cerro la entrada
+	 */
+	private boolean exigirCalificacion(Usuario usuario) {
+
+		Optional<Viaje> pendiente = usuario.getCliente().viajePendienteDeCalificacion();
+
+		while (pendiente.isPresent()) {
+
+			Viaje viaje = pendiente.get();
+			String nombre = viaje.getConductor() == null ? "" : viaje.getConductor().getNombre();
+			String texto = vista.leer(Mensajes.get("consola.pedirCalificacion", nombre));
+
+			if (texto == null) {
+
+				return false;
+			}
+
+			try {
+
+				int valor = Integer.parseInt(texto);
+
+				if (valor < 1 || valor > 5) {
+
+					throw new NumberFormatException();
+				}
+
+				contexto.calificarViaje(viaje, CalificacionViaje.values()[valor]);
+				vista.mostrar(Mensajes.get("cliente.calificacion", Formato.calificacionConNombre(viaje.getCalificacionConductor())));
+
+			} catch (NumberFormatException e) {
+
+				vista.mostrar(Mensajes.get("consola.calificacionInvalida"));
+			}
+
+			pendiente = usuario.getCliente().viajePendienteDeCalificacion();
+		}
+
+		return true;
 	}
 
 	private void solicitarViaje(Usuario usuario) {
@@ -433,6 +483,8 @@ public class ControladorConsola {
 	/** @return false si se cerro la entrada */
 	private boolean menuConductor(Usuario usuario) {
 
+		registroConductor(usuario); // lo primero que ve el conductor es el registro de sus viajes
+
 		while (true) {
 
 			vista.mostrar(Mensajes.get("consola.menuConductor"));
@@ -446,7 +498,7 @@ public class ControladorConsola {
 			switch (opcion) {
 
 			case "1":
-				tablaViajes(usuario.getConductor().getViajes());
+				registroConductor(usuario);
 				break;
 
 			case "2":
@@ -464,6 +516,23 @@ public class ControladorConsola {
 				vista.mostrar(Mensajes.get("consola.opcionInvalida"));
 			}
 		}
+	}
+
+	private void registroConductor(Usuario usuario) {
+
+		List<Viaje> viajes = usuario.getConductor().getViajes();
+		double promedio = Formato.promedio(viajes);
+
+		vista.mostrar(Mensajes.get("consola.registroTitulo"));
+		vista.mostrarTabla(List.of(Mensajes.get("tabla.id"), Mensajes.get("tabla.cliente"),
+				Mensajes.get("tabla.servicio"), Mensajes.get("tabla.origen"), Mensajes.get("tabla.destino"),
+				Mensajes.get("tabla.estado"), Mensajes.get("tabla.fecha"), Mensajes.get("tabla.calificacion")),
+				Formato.registroDeConductor(contexto, viajes).stream()
+						.map(f -> List.of(f.id(), f.cliente(), f.servicio(), f.origen(), f.destino(), f.estado(),
+								f.fecha(), f.calificacion()))
+						.toList());
+		vista.mostrar(Mensajes.get("conductor.resumen", viajes.size(),
+				promedio < 0 ? "-" : String.format(Locale.ROOT, "%.2f", promedio)));
 	}
 
 	private boolean menuTablas() {

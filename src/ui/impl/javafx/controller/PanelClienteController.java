@@ -23,6 +23,12 @@ import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
+import javafx.scene.control.ButtonBar;
+import javafx.scene.control.ButtonType;
+import javafx.scene.control.Dialog;
+import javafx.scene.control.RadioButton;
+import javafx.scene.control.ToggleGroup;
+import javafx.scene.layout.VBox;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextArea;
@@ -40,11 +46,13 @@ import rutas.api.RutaNoDisponibleException;
 import rutas.api.RutasViaje;
 import servicio.Servicio;
 import ubicacion.Ubicacion;
+import ui.Formato;
 import ui.api.VisualizadorMapa;
 import ui.impl.javafx.VistasFX;
 import ui.impl.javafx.map.VisualizadorRutasLeaflet;
 import usuario.Usuario;
 import vehiculo.Vehiculo;
+import viajes.CalificacionViaje;
 import viajes.EstadoViaje;
 import viajes.RegistroViaje;
 import viajes.Viaje;
@@ -359,6 +367,69 @@ public class PanelClienteController {
 		}
 
 		actualizarCancelar();
+
+		if (estado == EstadoViaje.FINALIZADO) {
+
+			// el viaje termino bien: el cliente tiene que calificar al conductor antes de seguir
+			Platform.runLater(() -> exigirCalificacion(viaje));
+		}
+	}
+
+	/**
+	 * Dialogo de calificacion obligatorio: el boton Enviar se habilita al elegir una opcion y, si el usuario
+	 * cierra la ventana sin calificar, se vuelve a mostrar.
+	 */
+	private void exigirCalificacion(Viaje viaje) {
+
+		if (!viaje.requiereCalificacion()) {
+
+			return;
+		}
+
+		Usuario conductor = viaje.getConductor();
+		String nombre = conductor == null ? "" : conductor.getNombre();
+		CalificacionViaje elegida = null;
+
+		while (elegida == null) {
+
+			Dialog<CalificacionViaje> dialogo = new Dialog<>();
+			dialogo.setTitle(Mensajes.get("cliente.calificar.titulo"));
+			dialogo.setHeaderText(Mensajes.get("cliente.calificar.pregunta", nombre));
+
+			ButtonType enviar = new ButtonType(Mensajes.get("cliente.calificar.enviar"), ButtonBar.ButtonData.OK_DONE);
+			dialogo.getDialogPane().getButtonTypes().add(enviar);
+			Node botonEnviar = dialogo.getDialogPane().lookupButton(enviar);
+			botonEnviar.setDisable(true);
+
+			ToggleGroup grupo = new ToggleGroup();
+			VBox opciones = new VBox(6);
+
+			for (int valor = 5; valor >= 1; valor--) {
+
+				CalificacionViaje c = CalificacionViaje.values()[valor];
+				RadioButton opcion = new RadioButton(Formato.calificacionConNombre(c));
+				opcion.setUserData(c);
+				opcion.setToggleGroup(grupo);
+				opciones.getChildren().add(opcion);
+			}
+
+			grupo.selectedToggleProperty().addListener((obs, a, b) -> botonEnviar.setDisable(b == null));
+			dialogo.getDialogPane().setContent(opciones);
+			dialogo.setResultConverter(boton -> grupo.getSelectedToggle() == null ? null
+					: (CalificacionViaje) grupo.getSelectedToggle().getUserData());
+
+			elegida = dialogo.showAndWait().orElse(null);
+		}
+
+		try {
+
+			contexto.calificarViaje(viaje, elegida);
+			mostrarEstado(viaje);
+
+		} catch (IllegalStateException | IllegalArgumentException ex) {
+
+			Alertas.error(Mensajes.get("cliente.calificar.titulo"), ex.getMessage());
+		}
 	}
 
 	private void replanificar(Viaje viaje) {
@@ -417,6 +488,12 @@ public class PanelClienteController {
 
 		EstadoViaje estado = viaje.estadoActual();
 		sb.append(Mensajes.get("cliente.estadoActual", Mensajes.get("estado." + estado.name()), descripcion(estado)));
+
+		if (estado == EstadoViaje.FINALIZADO && !viaje.requiereCalificacion()) {
+
+			sb.append("\n").append(Mensajes.get("cliente.calificacion",
+					Formato.calificacionConNombre(viaje.getCalificacionConductor())));
+		}
 
 		if (estado == EstadoViaje.CANCELADO && motivo != null) {
 

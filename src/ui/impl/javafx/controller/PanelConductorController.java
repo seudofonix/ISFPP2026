@@ -9,8 +9,11 @@ package ui.impl.javafx.controller;
 
 import java.time.format.DateTimeFormatter;
 
+import java.util.List;
+
 import aplicacion.ContextoAplicacion;
 import idioma.Mensajes;
+import ui.Formato;
 import javafx.beans.property.SimpleDoubleProperty;
 import javafx.beans.property.SimpleIntegerProperty;
 import javafx.beans.property.SimpleStringProperty;
@@ -58,6 +61,16 @@ public class PanelConductorController {
 	@FXML private TableColumn<Viaje, String> colViaConductor;
 	@FXML private TableColumn<Viaje, String> colViaServicio;
 	@FXML private TableColumn<Viaje, String> colViaEstado;
+	@FXML private TableView<Formato.FilaRegistro> tablaRegistro;
+	@FXML private Label lblResumenRegistro;
+	@FXML private TableColumn<Formato.FilaRegistro, String> colRegId;
+	@FXML private TableColumn<Formato.FilaRegistro, String> colRegCliente;
+	@FXML private TableColumn<Formato.FilaRegistro, String> colRegServicio;
+	@FXML private TableColumn<Formato.FilaRegistro, String> colRegOrigen;
+	@FXML private TableColumn<Formato.FilaRegistro, String> colRegDestino;
+	@FXML private TableColumn<Formato.FilaRegistro, String> colRegEstado;
+	@FXML private TableColumn<Formato.FilaRegistro, String> colRegFecha;
+	@FXML private TableColumn<Formato.FilaRegistro, String> colRegCalificacion;
 	@FXML private TableColumn<Viaje, String> colViaHora;
 
 	@FXML private TableView<Servicio> tablaServicios;
@@ -90,6 +103,20 @@ public class PanelConductorController {
 		tablaUsuarios.setItems(FXCollections.observableArrayList(contexto.getUsuarios()));
 		tablaServicios.setItems(FXCollections.observableArrayList(contexto.getServicios()));
 		handleActualizarViajes();
+		handleActualizarRegistro();
+	}
+
+	/** Registro de los viajes hechos por este conductor (es la primera pestana del panel). */
+	@FXML
+	private void handleActualizarRegistro() {
+
+		List<Viaje> viajes = contexto.getUsuarioLogueado().getConductor().getViajes();
+
+		tablaRegistro.setItems(FXCollections.observableArrayList(Formato.registroDeConductor(contexto, viajes)));
+
+		double promedio = Formato.promedio(viajes);
+		lblResumenRegistro.setText(Mensajes.get("conductor.resumen", viajes.size(),
+				promedio < 0 ? "-" : String.format(java.util.Locale.ROOT, "%.2f", promedio)));
 	}
 
 	/** Vuelve a leer los viajes que hay en memoria (los de todos los clientes). */
@@ -109,9 +136,23 @@ public class PanelConductorController {
 				contexto);
 	}
 
+	private void configurarRegistro() {
+
+		colRegId.setCellValueFactory(c -> new SimpleStringProperty(c.getValue().id()));
+		colRegCliente.setCellValueFactory(c -> new SimpleStringProperty(c.getValue().cliente()));
+		colRegServicio.setCellValueFactory(c -> new SimpleStringProperty(c.getValue().servicio()));
+		colRegOrigen.setCellValueFactory(c -> new SimpleStringProperty(c.getValue().origen()));
+		colRegDestino.setCellValueFactory(c -> new SimpleStringProperty(c.getValue().destino()));
+		colRegEstado.setCellValueFactory(c -> new SimpleStringProperty(c.getValue().estado()));
+		colRegFecha.setCellValueFactory(c -> new SimpleStringProperty(c.getValue().fecha()));
+		colRegCalificacion.setCellValueFactory(c -> new SimpleStringProperty(c.getValue().calificacion()));
+		tablaRegistro.setPlaceholder(new Label(Mensajes.get("conductor.sinViajes")));
+	}
+
 	private void configurarColumnas() {
 
 		DateTimeFormatter hora = DateTimeFormatter.ofPattern("HH:mm:ss");
+		configurarRegistro();
 		colViaId.setCellValueFactory(c -> new SimpleStringProperty(c.getValue().getId().toString().substring(0, 8)));
 		colViaCliente.setCellValueFactory(c -> new SimpleStringProperty(c.getValue().getCliente().getNombre()));
 		colViaConductor.setCellValueFactory(c -> new SimpleStringProperty(

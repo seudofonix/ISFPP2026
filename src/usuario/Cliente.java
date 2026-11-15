@@ -59,6 +59,12 @@ public class Cliente {
 		}
 	}
 
+	/** Viaje finalizado que el cliente todavia debe calificar (si hay alguno). */
+	public java.util.Optional<Viaje> viajePendienteDeCalificacion() {
+
+		return viajes.stream().filter(Viaje::requiereCalificacion).findFirst();
+	}
+
 	/**
 	 * Agrega un viaje al registro de viajes del cliente
 	 *

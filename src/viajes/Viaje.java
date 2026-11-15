@@ -180,6 +180,32 @@ public class Viaje {
 		}
 	}
 
+	/** El viaje termino bien y el cliente todavia no califico al conductor. */
+	public synchronized boolean requiereCalificacion() {
+
+		return estadoActual() == EstadoViaje.FINALIZADO
+				&& (calificacionConductor == null || calificacionConductor == CalificacionViaje.NO_CALIFICADO);
+	}
+
+	/**
+	 * El cliente califica al conductor al terminar el viaje. Solo se puede una vez y con una calificacion real.
+	 *
+	 * @throws IllegalStateException    si el viaje no esta finalizado o ya fue calificado
+	 * @throws IllegalArgumentException si la calificacion es nula o NO_CALIFICADO
+	 */
+	public synchronized void calificarConductor(CalificacionViaje calificacion) {
+
+		if (calificacion == null || calificacion == CalificacionViaje.NO_CALIFICADO) {
+			throw new IllegalArgumentException("Hay que elegir una calificacion de 1 a 5.");
+		}
+
+		if (!requiereCalificacion()) {
+			throw new IllegalStateException("Solo se puede calificar un viaje finalizado que no fue calificado.");
+		}
+
+		this.calificacionConductor = calificacion;
+	}
+
 	/**
 	 * Registra la finalización del viaje y recibe una única calificación común.
 	 *

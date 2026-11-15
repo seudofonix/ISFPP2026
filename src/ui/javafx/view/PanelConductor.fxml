@@ -33,6 +33,35 @@
    <center>
       <TabPane tabClosingPolicy="UNAVAILABLE" BorderPane.alignment="CENTER">
          <tabs>
+            <Tab text="%tab.registro">
+               <content>
+                  <VBox spacing="6.0">
+                     <padding>
+                        <Insets bottom="6.0" left="6.0" right="6.0" top="6.0" />
+                     </padding>
+                     <children>
+                        <HBox alignment="CENTER_LEFT" spacing="12.0">
+                           <children>
+                              <Button mnemonicParsing="false" onAction="#handleActualizarRegistro" text="%comun.actualizar" />
+                              <Label fx:id="lblResumenRegistro" />
+                           </children>
+                        </HBox>
+                        <TableView fx:id="tablaRegistro" VBox.vgrow="ALWAYS">
+                           <columns>
+                                          <TableColumn fx:id="colRegId" prefWidth="80.0" text="%tabla.id" />
+                                          <TableColumn fx:id="colRegCliente" prefWidth="140.0" text="%tabla.cliente" />
+                                          <TableColumn fx:id="colRegServicio" prefWidth="100.0" text="%tabla.servicio" />
+                                          <TableColumn fx:id="colRegOrigen" prefWidth="170.0" text="%tabla.origen" />
+                                          <TableColumn fx:id="colRegDestino" prefWidth="170.0" text="%tabla.destino" />
+                                          <TableColumn fx:id="colRegEstado" prefWidth="100.0" text="%tabla.estado" />
+                                          <TableColumn fx:id="colRegFecha" prefWidth="130.0" text="%tabla.fecha" />
+                                          <TableColumn fx:id="colRegCalificacion" prefWidth="110.0" text="%tabla.calificacion" />
+                           </columns>
+                        </TableView>
+                     </children>
+                  </VBox>
+               </content>
+            </Tab>
             <Tab text="%tab.tablas">
                <content>
                   <TabPane side="LEFT" tabClosingPolicy="UNAVAILABLE">
