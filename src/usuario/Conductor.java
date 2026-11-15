@@ -24,6 +24,7 @@ public class Conductor {
 	// Los cambia el hilo del conductor simulado y los lee la pantalla: volatile hace que la
 	// pantalla vea siempre el valor actualizado.
 	private volatile CategoriaVehiculo categoriaVehiculoActivo;
+	private volatile Vehiculo vehiculoActivo;
 	private volatile EstadoConductor estadoConductor;
 	private List<Viaje> viajes;
 	private Map<String, Vehiculo> vehiculos;
@@ -62,6 +63,17 @@ public class Conductor {
 		this.categoriaVehiculoActivo = categoriaVehiculoActivo;
 	}
 
+	/** Vehiculo con el que el conductor esta prestando el viaje actual, o null si no tiene viaje en curso. */
+	public Vehiculo getVehiculoActivo() {
+
+		return vehiculoActivo;
+	}
+
+	public void setVehiculoActivo(Vehiculo vehiculoActivo) {
+
+		this.vehiculoActivo = vehiculoActivo;
+	}
+
 	public EstadoConductor getEstadoConductor() {
 
 		return estadoConductor;
@@ -81,13 +93,6 @@ public class Conductor {
 
 		return new HashMap<>(vehiculos);
 	}
-
-	/**
-	 * Agrega un nuevo vehiculo del conductor a su registro, usando la patente del
-	 * mismo para identificarlo
-	 *
-	 * @param vehiculo nuevo vehiculo perteneciente al conductor
-	 */
 
 	/**
 	 * Vehiculo del conductor que puede prestar el servicio: mismo tipo de vehiculo, categoria igual o superior y
@@ -124,6 +129,12 @@ public class Conductor {
 		return mismoTipo && categoriaSuficiente && habilitado;
 	}
 
+	/**
+	 * Agrega un nuevo vehiculo del conductor a su registro, usando la patente del
+	 * mismo para identificarlo
+	 *
+	 * @param vehiculo nuevo vehiculo perteneciente al conductor
+	 */
 	public void agregarVehiculo(Vehiculo vehiculo) {
 
 		vehiculos.put(vehiculo.getPatente(), vehiculo);

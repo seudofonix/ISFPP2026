@@ -131,6 +131,7 @@ public class Viaje {
 		this.conductor = conductor;
 		this.vehiculo = vehiculoAsignado;
 		conductor.getConductor().setCategoriaVehiculoActivo(vehiculoAsignado.getCategoriaVehiculo());
+		conductor.getConductor().setVehiculoActivo(vehiculoAsignado);
 		conductor.getConductor().agregarViaje(this);
 		conductor.getConductor().setEstadoConductor(EstadoConductor.VIAJE_A_ORIGEN);
 		registroViaje.add(new RegistroViaje(fechaHora, EstadoViaje.ACEPTADO));
@@ -175,6 +176,7 @@ public class Viaje {
 
 		if (conductor != null && conductor.getConductor() != null) {
 			conductor.getConductor().setEstadoConductor(EstadoConductor.DISPONIBLE);
+			conductor.getConductor().setVehiculoActivo(null);
 		}
 	}
 
@@ -213,6 +215,7 @@ public class Viaje {
 
 		if (conductor != null && conductor.getConductor() != null) {
 			conductor.getConductor().setEstadoConductor(EstadoConductor.DISPONIBLE);
+			conductor.getConductor().setVehiculoActivo(null);
 		}
 
 		if (usuario != null) {
