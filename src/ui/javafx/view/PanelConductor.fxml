@@ -26,58 +26,110 @@
                </children>
             </VBox>
             <Region HBox.hgrow="ALWAYS" />
-            <Button fx:id="btnCerrarSesion" mnemonicParsing="false" onAction="#handleCerrarSesion" text="Cerrar sesion" />
+            <Button fx:id="btnCerrarSesion" mnemonicParsing="false" onAction="#handleCerrarSesion" text="%comun.cerrarSesion" />
          </children>
       </HBox>
    </top>
    <center>
       <TabPane tabClosingPolicy="UNAVAILABLE" BorderPane.alignment="CENTER">
          <tabs>
-            <Tab text="Tablas">
+            <Tab text="%tab.registro">
+               <content>
+                  <VBox spacing="6.0">
+                     <padding>
+                        <Insets bottom="6.0" left="6.0" right="6.0" top="6.0" />
+                     </padding>
+                     <children>
+                        <HBox alignment="CENTER_LEFT" spacing="12.0">
+                           <children>
+                              <Button mnemonicParsing="false" onAction="#handleActualizarRegistro" text="%comun.actualizar" />
+                              <Label fx:id="lblResumenRegistro" />
+                           </children>
+                        </HBox>
+                        <TableView fx:id="tablaRegistro" VBox.vgrow="ALWAYS">
+                           <columns>
+                                          <TableColumn fx:id="colRegId" prefWidth="80.0" text="%tabla.id" />
+                                          <TableColumn fx:id="colRegCliente" prefWidth="140.0" text="%tabla.cliente" />
+                                          <TableColumn fx:id="colRegServicio" prefWidth="100.0" text="%tabla.servicio" />
+                                          <TableColumn fx:id="colRegOrigen" prefWidth="170.0" text="%tabla.origen" />
+                                          <TableColumn fx:id="colRegDestino" prefWidth="170.0" text="%tabla.destino" />
+                                          <TableColumn fx:id="colRegEstado" prefWidth="100.0" text="%tabla.estado" />
+                                          <TableColumn fx:id="colRegFecha" prefWidth="130.0" text="%tabla.fecha" />
+                                          <TableColumn fx:id="colRegCalificacion" prefWidth="110.0" text="%tabla.calificacion" />
+                                          <TableColumn fx:id="colRegComentario" prefWidth="260.0" text="%tabla.comentario" />
+                           </columns>
+                        </TableView>
+                     </children>
+                  </VBox>
+               </content>
+            </Tab>
+            <Tab text="%tab.tablas">
                <content>
                   <TabPane side="LEFT" tabClosingPolicy="UNAVAILABLE">
                      <tabs>
-                        <Tab text="Vehiculos">
+                        <Tab text="%tab.vehiculos">
                            <content>
                               <TableView fx:id="tablaVehiculos">
                                  <columns>
-                                    <TableColumn fx:id="colVehPatente" prefWidth="100.0" text="Patente" />
-                                    <TableColumn fx:id="colVehModelo" prefWidth="160.0" text="Modelo" />
-                                    <TableColumn fx:id="colVehCapacidad" prefWidth="90.0" text="Capacidad" />
-                                    <TableColumn fx:id="colVehTipo" prefWidth="90.0" text="Tipo" />
-                                    <TableColumn fx:id="colVehCategoria" prefWidth="110.0" text="Categoria" />
-                                    <TableColumn fx:id="colVehServicios" prefWidth="200.0" text="Servicios" />
+                                    <TableColumn fx:id="colVehPatente" prefWidth="100.0" text="%tabla.patente" />
+                                    <TableColumn fx:id="colVehModelo" prefWidth="160.0" text="%tabla.modelo" />
+                                    <TableColumn fx:id="colVehCapacidad" prefWidth="90.0" text="%tabla.capacidad" />
+                                    <TableColumn fx:id="colVehTipo" prefWidth="90.0" text="%tabla.tipo" />
+                                    <TableColumn fx:id="colVehCategoria" prefWidth="110.0" text="%tabla.categoria" />
+                                    <TableColumn fx:id="colVehServicios" prefWidth="200.0" text="%tabla.servicios" />
                                  </columns>
                               </TableView>
                            </content>
                         </Tab>
-                        <Tab text="Usuarios">
+                        <Tab text="%tab.usuarios">
                            <content>
                               <TableView fx:id="tablaUsuarios">
                                  <columns>
-                                    <TableColumn fx:id="colUsuNombre" prefWidth="140.0" text="Nombre" />
-                                    <TableColumn fx:id="colUsuTelefono" prefWidth="110.0" text="Telefono" />
-                                    <TableColumn fx:id="colUsuEmail" prefWidth="190.0" text="Email" />
-                                    <TableColumn fx:id="colUsuRol" prefWidth="90.0" text="Rol activo" />
-                                    <TableColumn fx:id="colUsuLicencia" prefWidth="100.0" text="Licencia" />
-                                    <TableColumn fx:id="colUsuVehiculos" prefWidth="200.0" text="Vehiculos (patentes)" />
+                                    <TableColumn fx:id="colUsuNombre" prefWidth="140.0" text="%tabla.nombre" />
+                                    <TableColumn fx:id="colUsuTelefono" prefWidth="110.0" text="%tabla.telefono" />
+                                    <TableColumn fx:id="colUsuEmail" prefWidth="190.0" text="%tabla.email" />
+                                    <TableColumn fx:id="colUsuRol" prefWidth="90.0" text="%tabla.rolActivo" />
+                                    <TableColumn fx:id="colUsuLicencia" prefWidth="100.0" text="%tabla.licencia" />
+                                    <TableColumn fx:id="colUsuVehiculos" prefWidth="200.0" text="%tabla.vehiculosPatentes" />
                                  </columns>
                               </TableView>
                            </content>
                         </Tab>
-                        <Tab text="Servicios">
+                        <Tab text="%tab.servicios">
                            <content>
                               <TableView fx:id="tablaServicios">
                                  <columns>
-                                    <TableColumn fx:id="colSerNombre" prefWidth="150.0" text="Nombre" />
-                                    <TableColumn fx:id="colSerBase" prefWidth="90.0" text="Tarifa base" />
-                                    <TableColumn fx:id="colSerKm" prefWidth="80.0" text="Precio/km" />
-                                    <TableColumn fx:id="colSerMinuto" prefWidth="90.0" text="Precio/min" />
-                                    <TableColumn fx:id="colSerVehiculo" prefWidth="90.0" text="Vehiculo" />
-                                    <TableColumn fx:id="colSerCategoria" prefWidth="100.0" text="Categoria" />
-                                    <TableColumn fx:id="colSerServicio" prefWidth="100.0" text="Servicio" />
+                                    <TableColumn fx:id="colSerNombre" prefWidth="150.0" text="%tabla.nombre" />
+                                    <TableColumn fx:id="colSerBase" prefWidth="90.0" text="%tabla.tarifaBase" />
+                                    <TableColumn fx:id="colSerKm" prefWidth="80.0" text="%tabla.precioKm" />
+                                    <TableColumn fx:id="colSerMinuto" prefWidth="90.0" text="%tabla.precioMinuto" />
+                                    <TableColumn fx:id="colSerVehiculo" prefWidth="90.0" text="%tabla.vehiculo" />
+                                    <TableColumn fx:id="colSerCategoria" prefWidth="100.0" text="%tabla.categoria" />
+                                    <TableColumn fx:id="colSerServicio" prefWidth="100.0" text="%tabla.tipoServicio" />
                                  </columns>
                               </TableView>
+                           </content>
+                        </Tab>
+                        <Tab text="%tab.viajes">
+                           <content>
+                              <VBox spacing="6.0">
+                                 <padding>
+                                    <Insets bottom="6.0" left="6.0" right="6.0" top="6.0" />
+                                 </padding>
+                                 <children>
+                                    <Button mnemonicParsing="false" onAction="#handleActualizarViajes" text="%comun.actualizar" />
+                                    <TableView fx:id="tablaViajes" VBox.vgrow="ALWAYS">
+                                       <columns>
+                                          <TableColumn fx:id="colViaId" prefWidth="90.0" text="%tabla.id" />
+                                          <TableColumn fx:id="colViaCliente" prefWidth="150.0" text="%tabla.cliente" />
+                                          <TableColumn fx:id="colViaConductor" prefWidth="150.0" text="%tabla.conductor" />
+                                          <TableColumn fx:id="colViaServicio" prefWidth="110.0" text="%tabla.servicio" />
+                                          <TableColumn fx:id="colViaEstado" prefWidth="100.0" text="%tabla.estado" />
+                                          <TableColumn fx:id="colViaHora" prefWidth="90.0" text="%tabla.hora" />
+                                       </columns>
+                                    </TableView>
+                                 </children>
+                              </VBox>
                            </content>
                         </Tab>
                      </tabs>

@@ -1,24 +1,24 @@
 /**
  * Ignacio Bullon - Joel Erlan Hughes - Santiago Gittardi. ISFPP Programacion Orientada a Objetos 2026
  *
- * CONTROLADOR de Login.fxml. Se elige primero el rol (usuario o conductor), despues la cuenta (la lista se
- * filtra segun el rol) y handleIngresar activa el rol, guarda el usuario en el contexto y abre el panel.
+ * CONTROLADOR de Login.fxml. Primero se escribe el email; si existe, se elige como ingresar (usuario o
+ * conductor). Ingresar como conductor exige que el email pertenezca a un conductor. handleIngresar activa el
+ * rol, guarda el usuario en el contexto y abre el panel que corresponde.
  */
 package ui.impl.javafx.controller;
 
 import java.io.IOException;
+import java.util.Optional;
 
 import aplicacion.ContextoAplicacion;
-import javafx.collections.FXCollections;
+import idioma.Mensajes;
 import javafx.fxml.FXML;
-import javafx.scene.control.Button;
+import javafx.scene.Node;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
-import javafx.scene.control.RadioButton;
-import javafx.scene.control.ToggleGroup;
+import javafx.scene.control.TextField;
 import javafx.stage.Stage;
 import javafx.util.StringConverter;
-import logica.Movilidad;
 import ui.impl.javafx.VistasFX;
 import usuario.RolUsuario;
 import usuario.Usuario;
@@ -27,13 +27,16 @@ public class LoginController {
 
 	private final ContextoAplicacion contexto;
 
-	@FXML private ToggleGroup grupoRol;
-	@FXML private RadioButton rbUsuario;
-	@FXML private RadioButton rbConductor;
-	@FXML private ComboBox<Usuario> cmbUsuarios;
+	@FXML private Node panelEmail;
+	@FXML private Node panelRol;
+	@FXML private TextField txtEmail;
+	@FXML private Label lblError;
+	@FXML private Label lblSaludo;
 	@FXML private Label lblDetalle;
 	@FXML private Label lblEstado;
-	@FXML private Button btnIngresar;
+	@FXML private ComboBox<String> cmbIdioma;
+
+	private Usuario identificado;
 
 	public LoginController(ContextoAplicacion contexto) {
 
@@ -43,35 +46,95 @@ public class LoginController {
 	@FXML
 	private void initialize() {
 
-		cmbUsuarios.setConverter(new StringConverter<>() {
+		actualizarEstado();
+		mostrarPasoEmail();
+		prepararSelectorIdioma();
+	}
+
+	/** Combo con los idiomas disponibles; al elegir otro se recarga la pantalla en ese idioma. */
+	private void prepararSelectorIdioma() {
+
+		cmbIdioma.getItems().setAll(Mensajes.IDIOMAS);
+		cmbIdioma.setConverter(new StringConverter<>() {
 
 			@Override
-			public String toString(Usuario u) {
-				return u == null ? "" : u.getNombre() + " (" + u.getEmail() + ")";
+			public String toString(String codigo) {
+
+				return codigo == null ? "" : Mensajes.nombreDeIdioma(codigo);
 			}
 
 			@Override
-			public Usuario fromString(String texto) {
+			public String fromString(String texto) {
+
 				return null;
 			}
 		});
+		cmbIdioma.setValue(Mensajes.getIdioma().getLanguage());
+		cmbIdioma.setOnAction(e -> {
 
-		grupoRol.selectedToggleProperty().addListener((obs, anterior, actual) -> {
+			String elegido = cmbIdioma.getValue();
 
-			if (actual == null) {
+			if (elegido != null && !elegido.equals(Mensajes.getIdioma().getLanguage())) {
 
-				anterior.setSelected(true); // siempre debe haber un rol elegido
-				return;
+				Mensajes.setIdioma(elegido);
+				VistasFX.mostrar((Stage) txtEmail.getScene().getWindow(), "Login.fxml", Mensajes.get("ventana.login"),
+						contexto);
 			}
-
-			cargarUsuarios();
 		});
+	}
 
-		cmbUsuarios.valueProperty().addListener((obs, anterior, actual) -> actualizarDetalle(actual));
+	/** Paso 1: busca el email escrito entre los usuarios cargados. */
+	@FXML
+	private void handleContinuar() {
 
-		rbUsuario.setSelected(true);
-		actualizarEstado();
-		cargarUsuarios();
+		String email = txtEmail.getText() == null ? "" : txtEmail.getText().trim();
+
+		if (email.isEmpty()) {
+
+			lblError.setText(Mensajes.get("login.escribiEmail"));
+			return;
+		}
+
+		Optional<Usuario> usuario = contexto.buscarUsuarioPorEmail(email);
+
+		if (usuario.isEmpty()) {
+
+			lblError.setText(Mensajes.get("login.mailDesconocido"));
+			return;
+		}
+
+		identificado = usuario.get();
+		lblError.setText("");
+		lblSaludo.setText(Mensajes.get("login.hola", identificado.getNombre(), identificado.getEmail()));
+		panelEmail.setVisible(false);
+		panelEmail.setManaged(false);
+		panelRol.setVisible(true);
+		panelRol.setManaged(true);
+		lblDetalle.setText(Mensajes.get("login.telefono", identificado.getTelefono()));
+	}
+
+	@FXML
+	private void handleCambiarMail() {
+
+		mostrarPasoEmail();
+	}
+
+	@FXML
+	private void handleIngresarComoUsuario() {
+
+		ingresar(RolUsuario.CLIENTE);
+	}
+
+	@FXML
+	private void handleIngresarComoConductor() {
+
+		if (identificado == null || identificado.getConductor() == null) {
+
+			Alertas.error(Mensajes.get("login.noSePudoIngresarTitulo"), Mensajes.get("login.noEsConductor"));
+			return;
+		}
+
+		ingresar(RolUsuario.CONDUCTOR);
 	}
 
 	@FXML
@@ -84,92 +147,58 @@ public class LoginController {
 
 		} catch (IOException | RuntimeException ex) {
 
-			lblEstado.setText("Error al cargar los datos desde " + contexto.getOrigenDatos());
-			Alertas.error("No se pudieron cargar los datos", ex.getMessage());
+			lblEstado.setText(Mensajes.get("login.errorCarga", contexto.getOrigen()));
+			Alertas.error(Mensajes.get("login.errorCargaTitulo"), ex.getMessage());
 		}
 
-		cargarUsuarios();
+		mostrarPasoEmail(); // los objetos se crearon de nuevo: hay que identificarse otra vez
 	}
 
-	@FXML
-	private void handleIngresar() {
-
-		Usuario elegido = cmbUsuarios.getValue();
-
-		if (elegido == null) {
-
-			Alertas.advertencia("Falta elegir la cuenta", "Elegi un usuario de la lista.");
-			return;
-		}
-
-		RolUsuario rol = rolElegido();
+	private void ingresar(RolUsuario rol) {
 
 		try {
 
-			if (elegido.getRolActivo() != rol) {
+			if (identificado.getRolActivo() != rol) {
 
-				elegido.cambiarRolActivo(rol);
+				identificado.cambiarRolActivo(rol);
 			}
 
-			contexto.setUsuarioLogueado(elegido);
+			contexto.setUsuarioLogueado(identificado);
 
 		} catch (IllegalStateException | IllegalArgumentException ex) {
 
-			Alertas.error("No se pudo ingresar", ex.getMessage());
+			Alertas.error(Mensajes.get("login.noSePudoIngresarTitulo"), ex.getMessage());
 			return;
 		}
 
-		Stage escenario = (Stage) btnIngresar.getScene().getWindow();
+		Stage escenario = (Stage) txtEmail.getScene().getWindow();
 
 		if (rol == RolUsuario.CONDUCTOR) {
 
-			VistasFX.mostrar(escenario, "PanelConductor.fxml", "Movilidad Digital - Conductor", contexto);
+			VistasFX.mostrar(escenario, "PanelConductor.fxml", Mensajes.get("ventana.conductor"), contexto);
 
 		} else {
 
-			VistasFX.mostrar(escenario, "PanelCliente.fxml", "Movilidad Digital - Usuario", contexto);
+			VistasFX.mostrar(escenario, "PanelCliente.fxml", Mensajes.get("ventana.usuario"), contexto);
 		}
 	}
 
-	private RolUsuario rolElegido() {
+	private void mostrarPasoEmail() {
 
-		return rbConductor.isSelected() ? RolUsuario.CONDUCTOR : RolUsuario.CLIENTE;
-	}
-
-	private void cargarUsuarios() {
-
-		var lista = rolElegido() == RolUsuario.CONDUCTOR ? contexto.getUsuariosConRol(RolUsuario.CONDUCTOR)
-				: Movilidad.filtrarClientesDisponibles(contexto.getUsuarios());
-
-		cmbUsuarios.setItems(FXCollections.observableArrayList(lista));
-		cmbUsuarios.getSelectionModel().clearSelection();
-		cmbUsuarios.setPromptText(rolElegido() == RolUsuario.CONDUCTOR ? "Elegi un conductor" : "Elegi un usuario");
-		actualizarDetalle(null);
+		identificado = null;
+		txtEmail.clear();
+		lblError.setText("");
+		lblDetalle.setText("");
+		panelRol.setVisible(false);
+		panelRol.setManaged(false);
+		panelEmail.setVisible(true);
+		panelEmail.setManaged(true);
+		txtEmail.requestFocus();
 	}
 
 	private void actualizarEstado() {
 
-		lblEstado.setText("Datos cargados desde " + contexto.getOrigenDatos() + ": " + contexto.getUsuarios().size()
-				+ " usuarios, " + contexto.getVehiculos().size() + " vehiculos, " + contexto.getServicios().size()
-				+ " servicios");
-	}
-
-	private void actualizarDetalle(Usuario usuario) {
-
-		btnIngresar.setDisable(usuario == null);
-
-		if (usuario == null) {
-
-			lblDetalle.setText("");
-
-		} else if (rolElegido() == RolUsuario.CONDUCTOR && usuario.getConductor() != null) {
-
-			lblDetalle.setText("Licencia: " + usuario.getConductor().getLicenciaConducir() + "  |  Vehiculos: "
-					+ String.join(", ", usuario.getConductor().getVehiculos().keySet()));
-
-		} else {
-
-			lblDetalle.setText("Telefono: " + usuario.getTelefono());
-		}
+		lblEstado.setText(Mensajes.get("login.estadoDatos", contexto.getOrigen(), contexto.getUsuarios().size(),
+				contexto.getVehiculos().size(), contexto.getServicios().size()));
 	}
 }

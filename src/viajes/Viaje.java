@@ -37,6 +37,10 @@ public class Viaje {
 
 	private Vehiculo vehiculo;
 
+	/** Largo maximo del comentario con que el cliente acompana su calificacion. */
+	public static final int MAX_COMENTARIO = 300;
+
+	private String comentarioCalificacion = "";
 	private CalificacionViaje calificacionConductor = CalificacionViaje.NO_CALIFICADO;
 	private CalificacionViaje calificacionCliente = CalificacionViaje.NO_CALIFICADO;
 
@@ -131,6 +135,7 @@ public class Viaje {
 		this.conductor = conductor;
 		this.vehiculo = vehiculoAsignado;
 		conductor.getConductor().setCategoriaVehiculoActivo(vehiculoAsignado.getCategoriaVehiculo());
+		conductor.getConductor().setVehiculoActivo(vehiculoAsignado);
 		conductor.getConductor().agregarViaje(this);
 		conductor.getConductor().setEstadoConductor(EstadoConductor.VIAJE_A_ORIGEN);
 		registroViaje.add(new RegistroViaje(fechaHora, EstadoViaje.ACEPTADO));
@@ -175,7 +180,58 @@ public class Viaje {
 
 		if (conductor != null && conductor.getConductor() != null) {
 			conductor.getConductor().setEstadoConductor(EstadoConductor.DISPONIBLE);
+			conductor.getConductor().setVehiculoActivo(null);
 		}
+	}
+
+	/** El viaje termino bien y el cliente todavia no califico al conductor. */
+	public synchronized boolean requiereCalificacion() {
+
+		return estadoActual() == EstadoViaje.FINALIZADO
+				&& (calificacionConductor == null || calificacionConductor == CalificacionViaje.NO_CALIFICADO);
+	}
+
+	/**
+	 * El cliente califica al conductor al terminar el viaje. Solo se puede una vez y con una calificacion real.
+	 *
+	 * @throws IllegalStateException    si el viaje no esta finalizado o ya fue calificado
+	 * @throws IllegalArgumentException si la calificacion es nula o NO_CALIFICADO
+	 */
+	public synchronized void calificarConductor(CalificacionViaje calificacion) {
+
+		calificarConductor(calificacion, null);
+	}
+
+	/**
+	 * El cliente califica al conductor y, si quiere, deja un comentario (opcional, hasta MAX_COMENTARIO caracteres).
+	 *
+	 * @throws IllegalStateException    si el viaje no esta finalizado o ya fue calificado
+	 * @throws IllegalArgumentException si la calificacion es nula o NO_CALIFICADO, o el comentario es demasiado largo
+	 */
+	public synchronized void calificarConductor(CalificacionViaje calificacion, String comentario) {
+
+		String limpio = comentario == null ? "" : comentario.trim();
+
+		if (limpio.length() > MAX_COMENTARIO) {
+			throw new IllegalArgumentException("El comentario puede tener hasta " + MAX_COMENTARIO + " caracteres.");
+		}
+
+		if (calificacion == null || calificacion == CalificacionViaje.NO_CALIFICADO) {
+			throw new IllegalArgumentException("Hay que elegir una calificacion de 1 a 5.");
+		}
+
+		if (!requiereCalificacion()) {
+			throw new IllegalStateException("Solo se puede calificar un viaje finalizado que no fue calificado.");
+		}
+
+		this.calificacionConductor = calificacion;
+		this.comentarioCalificacion = limpio;
+	}
+
+	/** Comentario que dejo el cliente al calificar; cadena vacia si no escribio ninguno. */
+	public synchronized String getComentarioCalificacion() {
+
+		return comentarioCalificacion;
 	}
 
 	/**
@@ -213,6 +269,7 @@ public class Viaje {
 
 		if (conductor != null && conductor.getConductor() != null) {
 			conductor.getConductor().setEstadoConductor(EstadoConductor.DISPONIBLE);
+			conductor.getConductor().setVehiculoActivo(null);
 		}
 
 		if (usuario != null) {

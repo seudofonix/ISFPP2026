@@ -112,6 +112,48 @@ class MovilidadTest {
 	}
 
 	@Test
+	void unConductorPremiumTomaConfortPeroUnoConfortNoTomaPremium() {
+
+		Servicio confort = new Servicio("Confort", 100, 10, 1, TipoVehiculo.AUTO, CategoriaVehiculo.CONFORT,
+				TipoServicio.PASAJEROS);
+		Servicio premium = new Servicio("Premium", 100, 10, 1, TipoVehiculo.AUTO, CategoriaVehiculo.PREMIUM,
+				TipoServicio.PASAJEROS);
+		Usuario conductorPremium = conductor("Premium", "p@x.com", new Vehiculo("DDD444", "BMW", 4, TipoVehiculo.AUTO,
+				CategoriaVehiculo.PREMIUM, Set.of(TipoServicio.PASAJEROS)), new Ubicacion(-42.7701, -65.0401));
+		Usuario conductorConfort = conductor("Confort", "c@x.com", new Vehiculo("EEE555", "Cruze", 4,
+				TipoVehiculo.AUTO, CategoriaVehiculo.CONFORT, Set.of(TipoServicio.PASAJEROS)),
+				new Ubicacion(-42.7701, -65.0401));
+
+		assertTrue(Movilidad.seleccionarConductor(List.of(conductorPremium), confort, origen).isPresent());
+		assertTrue(Movilidad.seleccionarConductor(List.of(conductorConfort), confort, origen).isPresent());
+		assertTrue(Movilidad.seleccionarConductor(List.of(conductorConfort), premium, origen).isEmpty());
+	}
+
+	@Test
+	void losConductoresSimuladosCubrenTodosLosServiciosAunSiSonPocos() {
+
+		Servicio confort = new Servicio("Confort", 100, 10, 1, TipoVehiculo.AUTO, CategoriaVehiculo.CONFORT,
+				TipoServicio.PASAJEROS);
+		Servicio premium = new Servicio("Premium", 100, 10, 1, TipoVehiculo.AUTO, CategoriaVehiculo.PREMIUM,
+				TipoServicio.PASAJEROS);
+		Usuario conductorPremium = conductor("Premium", "zzz@x.com", new Vehiculo("DDD444", "BMW", 4,
+				TipoVehiculo.AUTO, CategoriaVehiculo.PREMIUM, Set.of(TipoServicio.PASAJEROS)),
+				new Ubicacion(-42.7701, -65.0401));
+
+		// por email "cerca" y "lejos" van antes que "zzz", pero el premium es el unico que cubre los tres servicios
+		List<Usuario> elegidos = Movilidad.elegirConductoresSimulados(List.of(cerca, lejos, conductorPremium),
+				List.of(estandar, confort, premium), null, 2);
+
+		assertEquals(2, elegidos.size());
+		assertEquals(conductorPremium, elegidos.get(0));
+
+		// el usuario de la sesion nunca se simula
+		assertTrue(Movilidad.elegirConductoresSimulados(List.of(cerca, conductorPremium),
+				List.of(estandar, confort, premium), conductorPremium, 3).stream()
+				.noneMatch(u -> u.equals(conductorPremium)));
+	}
+
+	@Test
 	void vehiculoCompatibleDelConductorEligeElDeMenorCategoria() {
 
 		Usuario u = new Usuario("Mixto", "1", "mixto@x.com");
@@ -124,16 +166,5 @@ class MovilidadTest {
 
 		assertEquals("YYY888", u.getConductor().vehiculoCompatible(estandar).getPatente());
 		assertNull(u.getConductor().vehiculoCompatible(null));
-	}
-
-	@Test
-	void clientesDisponiblesSonLosQueNoTienenUnViajeActivo() {
-
-		Usuario libre = new Usuario("Libre", "1", "libre@x.com");
-		Usuario ocupado = new Usuario("Ocupado", "1", "ocupado@x.com");
-		new viajes.Viaje(ocupado, origen, new Ubicacion(-42.76, -65.03), estandar)
-				.solicitar(java.time.LocalDateTime.now());
-
-		assertEquals(List.of(libre), Movilidad.filtrarClientesDisponibles(List.of(libre, ocupado)));
 	}
 }

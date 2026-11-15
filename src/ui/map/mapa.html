@@ -113,15 +113,53 @@
     delete marcadoresSeleccion.destino;
   };
 
+  // ---- movimiento del conductor: se recorre la polilinea de un tramo en un tiempo dado
+  let tramos = { acercamiento: [], traslado: [] };
+  let marcadorConductor = null;
+  let temporizador = null;
+
+  window.detenerAnimacion = function () {
+    if (temporizador !== null) { clearInterval(temporizador); temporizador = null; }
+  };
+
+  window.animarConductor = function (tramo, segundos) {
+    window.detenerAnimacion();
+    const puntos = tramos[tramo];
+    if (!marcadorConductor || !puntos || puntos.length < 2) { return; }
+    const acumulado = [0];
+    for (let i = 1; i < puntos.length; i++) {
+      acumulado.push(acumulado[i - 1] + mapa.distance(puntos[i - 1], puntos[i]));
+    }
+    const total = acumulado[acumulado.length - 1];
+    const inicio = Date.now();
+    const duracion = Math.max(1, segundos * 1000);
+    marcadorConductor.setLatLng(puntos[0]);
+    temporizador = setInterval(function () {
+      const fraccion = Math.min(1, (Date.now() - inicio) / duracion);
+      const objetivo = fraccion * total;
+      let i = 1;
+      while (i < acumulado.length - 1 && acumulado[i] < objetivo) { i++; }
+      const largo = acumulado[i] - acumulado[i - 1];
+      const t = largo > 0 ? (objetivo - acumulado[i - 1]) / largo : 1;
+      const a = puntos[i - 1], b = puntos[i];
+      marcadorConductor.setLatLng([a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t]);
+      if (fraccion >= 1) { window.detenerAnimacion(); }
+    }, 40);
+  };
+
   window.limpiarRutas = function () {
+    window.detenerAnimacion();
+    marcadorConductor = null;
     rutasDibujadas.clearLayers();
   };
 
   window.mostrarRutas = function (datos) {
+    window.detenerAnimacion();
     rutasDibujadas.clearLayers();
+    tramos = { acercamiento: datos.acercamiento, traslado: datos.traslado };
     const acercamiento = L.polyline(datos.acercamiento, { color: COLOR_ACERCAMIENTO, weight: 5 }).addTo(rutasDibujadas);
     const traslado = L.polyline(datos.traslado, { color: COLOR_TRASLADO, weight: 5 }).addTo(rutasDibujadas);
-    marca(datos.conductor, COLOR_CONDUCTOR, 'Conductor').addTo(rutasDibujadas);
+    marcadorConductor = marca(datos.conductor, COLOR_CONDUCTOR, 'Conductor').addTo(rutasDibujadas);
     marca(datos.origen, COLOR_ORIGEN, 'Origen').addTo(rutasDibujadas);
     marca(datos.destino, COLOR_DESTINO, 'Destino').addTo(rutasDibujadas);
     mapa.fitBounds(L.featureGroup([acercamiento, traslado]).getBounds(), { paddingTopLeft: [30, 30], paddingBottomRight: [30, 70] });

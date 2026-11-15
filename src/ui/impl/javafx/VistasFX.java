@@ -10,6 +10,7 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 
 import aplicacion.ContextoAplicacion;
+import idioma.Mensajes;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
@@ -28,13 +29,14 @@ public final class VistasFX {
 		try {
 
 			FXMLLoader loader = new FXMLLoader(VistasFX.class.getResource(CARPETA + archivoFxml));
+			loader.setResources(Mensajes.getBundle()); // textos %clave de los FXML en el idioma actual
 			loader.setControllerFactory(tipo -> crearControlador(tipo, contexto));
 
 			return loader.load();
 
 		} catch (IOException e) {
 
-			throw new UncheckedIOException("No se pudo cargar la pantalla " + archivoFxml, e);
+			throw new UncheckedIOException(Mensajes.get("error.cargarPantalla", archivoFxml), e);
 		}
 	}
 
@@ -58,7 +60,7 @@ public final class VistasFX {
 
 		} catch (ReflectiveOperationException e) {
 
-			throw new IllegalStateException("No se pudo crear el controlador " + tipo.getName(), e);
+			throw new IllegalStateException(Mensajes.get("error.crearControlador", tipo.getName()), e);
 		}
 	}
 }

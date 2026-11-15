@@ -17,6 +17,10 @@ final class Alertas {
 		mostrar(Alert.AlertType.ERROR, titulo, mensaje);
 	}
 
+	static void informacion(String titulo, String mensaje) {
+		mostrar(Alert.AlertType.INFORMATION, titulo, mensaje);
+	}
+
 	static void advertencia(String titulo, String mensaje) {
 
 		mostrar(Alert.AlertType.WARNING, titulo, mensaje);

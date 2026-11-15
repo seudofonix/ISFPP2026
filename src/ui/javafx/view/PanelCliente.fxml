@@ -6,7 +6,6 @@
 <?import javafx.scene.control.Label?>
 <?import javafx.scene.control.TextArea?>
 <?import javafx.scene.control.TextField?>
-<?import javafx.scene.control.ToggleButton?>
 <?import javafx.scene.layout.BorderPane?>
 <?import javafx.scene.layout.ColumnConstraints?>
 <?import javafx.scene.layout.GridPane?>
@@ -25,75 +24,74 @@
          <children>
             <Label fx:id="lblUsuario" style="-fx-font-weight: bold;" text="Usuario" />
             <Region HBox.hgrow="ALWAYS" />
-            <Button fx:id="btnCerrarSesion" mnemonicParsing="false" onAction="#handleCerrarSesion" text="Cerrar sesion" />
+            <Button fx:id="btnCerrarSesion" mnemonicParsing="false" onAction="#handleCerrarSesion" text="%comun.cerrarSesion" />
          </children>
       </HBox>
    </top>
    <left>
-      <VBox fx:id="panelFormulario" prefWidth="400.0" spacing="10.0" BorderPane.alignment="CENTER">
+      <VBox prefWidth="400.0" spacing="10.0" BorderPane.alignment="CENTER">
          <padding>
             <Insets bottom="10.0" left="12.0" right="12.0" top="4.0" />
          </padding>
          <children>
-            <Label text="Servicio" />
-            <ComboBox fx:id="cmbServicios" maxWidth="1.7976931348623157E308" promptText="Elegi un servicio" />
-            <ToggleButton fx:id="swModoMapa" mnemonicParsing="false" onAction="#handleCambiarModoUbicaciones" text="Elegir origen y destino en el mapa" />
-            <Label fx:id="lblPaso" wrapText="true" />
-            <GridPane hgap="8.0" vgap="8.0">
-               <columnConstraints>
-                  <ColumnConstraints minWidth="52.0" />
-                  <ColumnConstraints minWidth="100.0" />
-                  <ColumnConstraints minWidth="100.0" />
-                  <ColumnConstraints minWidth="80.0" />
-               </columnConstraints>
+            <VBox fx:id="panelFormulario" spacing="10.0">
                <children>
-                  <Label text="Origen" GridPane.columnIndex="0" GridPane.rowIndex="0" />
-                  <TextField fx:id="txtLatOrigen" promptText="Latitud" GridPane.columnIndex="1" GridPane.rowIndex="0" />
-                  <TextField fx:id="txtLonOrigen" promptText="Longitud" GridPane.columnIndex="2" GridPane.rowIndex="0" />
-                  <Button fx:id="btnGenerarOrigen" mnemonicParsing="false" onAction="#handleGenerarOrigenAleatorio" text="Aleatorio" GridPane.columnIndex="3" GridPane.rowIndex="0" />
-                  <Label text="Destino" GridPane.columnIndex="0" GridPane.rowIndex="1" />
-                  <TextField fx:id="txtLatDestino" promptText="Latitud" GridPane.columnIndex="1" GridPane.rowIndex="1" />
-                  <TextField fx:id="txtLonDestino" promptText="Longitud" GridPane.columnIndex="2" GridPane.rowIndex="1" />
-                  <Button fx:id="btnGenerarDestino" mnemonicParsing="false" onAction="#handleGenerarDestinoAleatorio" text="Aleatorio" GridPane.columnIndex="3" GridPane.rowIndex="1" />
+                  <Label text="%cliente.servicio" />
+                  <ComboBox fx:id="cmbServicios" maxWidth="1.7976931348623157E308" promptText="%cliente.elegirServicioPrompt" />
+                  <Button fx:id="btnElegirPuntos" maxWidth="1.7976931348623157E308" mnemonicParsing="false" onAction="#handleElegirPuntos" text="%cliente.elegirPuntos" />
+                  <Label fx:id="lblPaso" wrapText="true" />
+                  <GridPane hgap="8.0" vgap="8.0">
+                     <columnConstraints>
+                        <ColumnConstraints minWidth="52.0" />
+                        <ColumnConstraints hgrow="ALWAYS" minWidth="200.0" />
+                     </columnConstraints>
+                     <children>
+                        <Label text="%cliente.origenLabel" GridPane.columnIndex="0" GridPane.rowIndex="0" />
+                        <TextField fx:id="txtOrigen" editable="false" promptText="%cliente.origenPrompt" GridPane.columnIndex="1" GridPane.rowIndex="0" />
+                        <Label text="%cliente.destinoLabel" GridPane.columnIndex="0" GridPane.rowIndex="1" />
+                        <TextField fx:id="txtDestino" editable="false" promptText="%cliente.destinoPrompt" GridPane.columnIndex="1" GridPane.rowIndex="1" />
+                     </children>
+                     <rowConstraints>
+                        <RowConstraints />
+                        <RowConstraints />
+                     </rowConstraints>
+                  </GridPane>
+                  <HBox spacing="10.0">
+                     <children>
+                        <Button fx:id="btnCotizar" disable="true" mnemonicParsing="false" onAction="#handleCotizar" text="%cliente.cotizar" />
+                        <Button fx:id="btnSolicitar" disable="true" mnemonicParsing="false" onAction="#handleSolicitarViaje" text="%cliente.solicitar" />
+                     </children>
+                  </HBox>
+                  <GridPane hgap="10.0" vgap="5.0">
+                     <children>
+                        <Label text="%cliente.distancia" GridPane.columnIndex="0" GridPane.rowIndex="0" />
+                        <Label fx:id="lblDistancia" text="-" GridPane.columnIndex="1" GridPane.rowIndex="0" />
+                        <Label text="%cliente.tiempo" GridPane.columnIndex="0" GridPane.rowIndex="1" />
+                        <Label fx:id="lblTiempo" text="-" GridPane.columnIndex="1" GridPane.rowIndex="1" />
+                        <Label text="%cliente.costo" GridPane.columnIndex="0" GridPane.rowIndex="2" />
+                        <Label fx:id="lblCosto" style="-fx-font-size: 18px; -fx-font-weight: bold;" text="-" GridPane.columnIndex="1" GridPane.rowIndex="2" />
+                        <Label style="-fx-text-fill: #1763c0;" text="%cliente.recogida" GridPane.columnIndex="0" GridPane.rowIndex="3" />
+                        <Label fx:id="lblRecogida" text="-" GridPane.columnIndex="1" GridPane.rowIndex="3" />
+                        <Label style="-fx-text-fill: #149566;" text="%cliente.traslado" GridPane.columnIndex="0" GridPane.rowIndex="4" />
+                        <Label fx:id="lblTraslado" text="-" GridPane.columnIndex="1" GridPane.rowIndex="4" />
+                     </children>
+                     <columnConstraints>
+                        <ColumnConstraints />
+                        <ColumnConstraints />
+                     </columnConstraints>
+                     <rowConstraints>
+                        <RowConstraints />
+                        <RowConstraints />
+                        <RowConstraints />
+                        <RowConstraints />
+                        <RowConstraints />
+                     </rowConstraints>
+                  </GridPane>
                </children>
-               <rowConstraints>
-                  <RowConstraints />
-                  <RowConstraints />
-               </rowConstraints>
-            </GridPane>
-            <HBox spacing="10.0">
-               <children>
-                  <Button fx:id="btnCotizar" disable="true" mnemonicParsing="false" onAction="#handleCotizar" text="Cotizar viaje" />
-                  <Button fx:id="btnSolicitar" disable="true" mnemonicParsing="false" onAction="#handleSolicitarViaje" text="Solicitar y visualizar viaje" />
-               </children>
-            </HBox>
-            <GridPane hgap="10.0" vgap="5.0">
-               <children>
-                  <Label text="Distancia" GridPane.columnIndex="0" GridPane.rowIndex="0" />
-                  <Label fx:id="lblDistancia" text="-" GridPane.columnIndex="1" GridPane.rowIndex="0" />
-                  <Label text="Tiempo estimado" GridPane.columnIndex="0" GridPane.rowIndex="1" />
-                  <Label fx:id="lblTiempo" text="-" GridPane.columnIndex="1" GridPane.rowIndex="1" />
-                  <Label text="Costo estimado" GridPane.columnIndex="0" GridPane.rowIndex="2" />
-                  <Label fx:id="lblCosto" style="-fx-font-size: 18px; -fx-font-weight: bold;" text="-" GridPane.columnIndex="1" GridPane.rowIndex="2" />
-                  <Label style="-fx-text-fill: #1763c0;" text="Recogida (azul)" GridPane.columnIndex="0" GridPane.rowIndex="3" />
-                  <Label fx:id="lblRecogida" text="-" GridPane.columnIndex="1" GridPane.rowIndex="3" />
-                  <Label style="-fx-text-fill: #149566;" text="Traslado (verde)" GridPane.columnIndex="0" GridPane.rowIndex="4" />
-                  <Label fx:id="lblTraslado" text="-" GridPane.columnIndex="1" GridPane.rowIndex="4" />
-               </children>
-               <columnConstraints>
-                  <ColumnConstraints />
-                  <ColumnConstraints />
-               </columnConstraints>
-               <rowConstraints>
-                  <RowConstraints />
-                  <RowConstraints />
-                  <RowConstraints />
-                  <RowConstraints />
-                  <RowConstraints />
-               </rowConstraints>
-            </GridPane>
-            <Label text="Estado del viaje" />
+            </VBox>
+            <Label text="%cliente.estadoTitulo" />
             <TextArea fx:id="txtAreaEstado" editable="false" prefRowCount="7" wrapText="true" />
+            <Button fx:id="btnCancelarViaje" disable="true" maxWidth="1.7976931348623157E308" mnemonicParsing="false" onAction="#handleCancelarViaje" text="%cliente.cancelar" />
          </children>
       </VBox>
    </left>

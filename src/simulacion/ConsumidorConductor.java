@@ -20,15 +20,17 @@ public final class ConsumidorConductor implements Runnable {
 	private final Usuario conductor;
 	private final BandejaViajes bandeja;
 	private final ConfiguracionSimulacion configuracion;
+	private final DuracionTramo duracion;
 	private final Consumer<Viaje> alCambiar;
 	private final AtomicBoolean activo;
 
 	public ConsumidorConductor(Usuario conductor, BandejaViajes bandeja, ConfiguracionSimulacion configuracion,
-			Consumer<Viaje> alCambiar, AtomicBoolean activo) {
+			DuracionTramo duracion, Consumer<Viaje> alCambiar, AtomicBoolean activo) {
 
 		this.conductor = conductor;
 		this.bandeja = bandeja;
 		this.configuracion = configuracion;
+		this.duracion = duracion;
 		this.alCambiar = alCambiar;
 		this.activo = activo;
 	}
@@ -120,8 +122,8 @@ public final class ConsumidorConductor implements Runnable {
 
 	private boolean avanzar(Viaje viaje, EstadoViaje esperado) {
 
-		long pasoMs = Math.max(1,
-				(long) (configuracion.segundosTramo() * 1000 / configuracion.pasosTramo()));
+		double segundos = segundosDelTramo(viaje, esperado);
+		long pasoMs = Math.max(1, (long) (segundos * 1000 / configuracion.pasosTramo()));
 
 		for (int paso = 1; paso <= configuracion.pasosTramo(); paso++) {
 
@@ -141,6 +143,19 @@ public final class ConsumidorConductor implements Runnable {
 			}
 		}
 		return true;
+	}
+
+	/** Si el calculo del tramo falla (por ejemplo, por una ruta no disponible) se usa el tiempo base. */
+	private double segundosDelTramo(Viaje viaje, EstadoViaje tramo) {
+
+		try {
+
+			return Math.max(0, duracion.segundos(viaje, tramo));
+
+		} catch (RuntimeException ex) {
+
+			return configuracion.segundosTramo();
+		}
 	}
 
 	/** Avisa al Modelo que cambio un viaje, sin cortar el hilo del conductor si la pantalla falla. */

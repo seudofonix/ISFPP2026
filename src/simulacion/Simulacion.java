@@ -44,6 +44,7 @@ public final class Simulacion {
 	private ScheduledExecutorService programador;
 	private Thread hiloProductor;
 	private ConfiguracionSimulacion configuracion;
+	private volatile DuracionTramo duracionTramo;
 
 	/**
 	 * @param alCambiar aviso que recibe el Modelo cuando cambia un viaje
@@ -53,6 +54,18 @@ public final class Simulacion {
 
 		this.alCambiar = Objects.requireNonNull(alCambiar, "alCambiar");
 		this.generador = generador;
+	}
+
+	/**
+	 * Cambia el calculo de duracion de los tramos. Si no se configura, todos los tramos duran
+	 * {@link ConfiguracionSimulacion#segundosTramo()}. Lo usa el Modelo para que la recogida tarde
+	 * segun la distancia entre el conductor y el origen.
+	 *
+	 * @param duracion calculo de los segundos que dura cada tramo
+	 */
+	public void setDuracionTramo(DuracionTramo duracion) {
+
+		this.duracionTramo = Objects.requireNonNull(duracion, "duracion");
 	}
 
 	/**
@@ -86,7 +99,8 @@ public final class Simulacion {
 		}
 
 		List<Usuario> validos = conductores.stream()
-				.filter(usuario -> usuario != null && usuario.getConductor() != null).toList();
+				.filter(usuario -> usuario != null && usuario.getConductor() != null)
+				.limit(configuracion.maximoConductores()).toList();
 
 		if (validos.isEmpty()) {
 
@@ -124,8 +138,15 @@ public final class Simulacion {
 
 			for (Usuario usuario : validos) {
 
-				consumidores.submit(
-						new ConsumidorConductor(usuario, bandejas, configuracion, this::avisar, activo));
+				DuracionTramo duracion = duracionTramo;
+
+				if (duracion == null) {
+
+					duracion = (viaje, tramo) -> configuracion.segundosTramo();
+				}
+
+				consumidores.submit(new ConsumidorConductor(usuario, bandejas, configuracion, duracion,
+						this::avisar, activo));
 			}
 
 			programador = Executors.newSingleThreadScheduledExecutor(tarea -> {

@@ -20,6 +20,8 @@ public class CargarParametros {
 	private static String archivoServicios;
 	private static String archivoVehiculos;
 	private static String origen = "archivo";
+	private static String ui = "fx";
+	private static String idioma = "es";
 
 	// Area de simulacion y estimacion de tiempos
 	private static double latitud1 = -42.832;
@@ -75,6 +77,8 @@ public class CargarParametros {
 		archivoServicios = properties.getProperty("servicio");
 		archivoVehiculos = properties.getProperty("vehiculo");
 		origen = normalizarOrigen(properties.getProperty("origen", "archivo"));
+		ui = normalizarUi(properties.getProperty("ui", "fx"));
+		idioma = texto(properties, "idioma", "es").toLowerCase();
 
 		latitud1 = numero(properties, "latitud1", -42.832);
 		latitud2 = numero(properties, "latitud2", -42.704);
@@ -158,6 +162,25 @@ public class CargarParametros {
 
 	        throw new IOException("Valor invalido para '" + clave + "' en config.properties: " + valor);
 	    }
+	}
+
+	/** Acepta "fx" (tambien "javafx") o "consola"; cualquier otro valor es un error. */
+	static String normalizarUi(String valor) throws IOException {
+
+		String limpio = valor.trim().toLowerCase();
+
+		if (limpio.equals("javafx")) {
+
+			return "fx";
+		}
+
+		if (!limpio.equals("fx") && !limpio.equals("consola")) {
+
+			throw new IOException("Valor invalido para 'ui' en config.properties: '" + valor.trim()
+					+ "'. Usar 'fx' (JavaFX) o 'consola'.");
+		}
+
+		return limpio;
 	}
 
 	/** Acepta "archivo" o "bd" (tambien "db"); cualquier otro valor es un error y no se usa otro origen en silencio. */
@@ -286,6 +309,18 @@ public class CargarParametros {
 	public static double getMapaCentroLongitud() {
 
 		return mapaCentroLongitud;
+	}
+
+	/** Interfaz de usuario a arrancar: "fx" o "consola". */
+	public static String getUi() {
+
+		return ui;
+	}
+
+	/** Codigo del idioma inicial de la interfaz ("es", "en"). */
+	public static String getIdioma() {
+
+		return idioma;
 	}
 
 	public static int getMapaZoom() {
