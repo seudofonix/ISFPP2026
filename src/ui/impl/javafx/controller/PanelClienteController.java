@@ -4,13 +4,12 @@
  * CONTROLADOR de PanelCliente.fxml. El usuario elige origen y destino (generados al azar o con clics en el
  * mapa), cotiza y solicita el viaje. Coordina la logica (ValidacionUbicaciones, Movilidad,
  * PlanificacionViajeService), el mapa (VisualizadorMapa) y los conductores simulados que corren en hilos
- * (ContextoAplicacion / GestorViajes). No implementa algoritmos viales ni conoce Leaflet.
+ * (ContextoAplicacion / Simulacion). No implementa algoritmos viales ni conoce Leaflet.
  */
 package ui.impl.javafx.controller;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
@@ -433,12 +432,7 @@ public class PanelClienteController {
 
 	private void mostrarEstado(Viaje viaje) {
 
-		List<RegistroViaje> registros;
-
-		synchronized (viaje) {
-
-			registros = new ArrayList<>(viaje.getRegistroViaje());
-		}
+		List<RegistroViaje> registros = viaje.getRegistroViaje();
 
 		StringBuilder sb = new StringBuilder();
 

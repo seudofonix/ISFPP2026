@@ -4,7 +4,7 @@
  * Contexto de la aplicacion. Carga usuarios, vehiculos y servicios (Datos, desde la base o los archivos segun
  * config.properties), mantiene el motor vial, el generador de posiciones y el usuario con la sesion iniciada,
  * y delega en InicializadorEscenario la ubicacion inicial de los conductores. Tambien coordina los hilos de
- * los conductores simulados (GestorViajes) y cierra el grafo al salir. No depende de JavaFX: la interfaz se
+ * los conductores simulados (Simulacion) y cierra el grafo al salir. No depende de JavaFX: la interfaz se
  * registra como observador de viajes y refresca la pantalla en su propio hilo.
  */
 package aplicacion;
@@ -17,15 +17,16 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Objects;
 import java.util.function.Consumer;
-import modelo.ConfiguracionSimulacion;
+
 import datos.CargarParametros;
 import datos.Datos;
-import modelo.GestorViajes;
 import rutas.api.PlanificadorRutas;
 import rutas.impl.PlanificadorRutasFactory;
 import servicio.Servicio;
+import simulacion.ConfiguracionSimulacion;
 import simulacion.GeneradorUbicacionesViales;
 import simulacion.InicializadorEscenario;
+import simulacion.Simulacion;
 import usuario.EstadoConductor;
 import usuario.RolUsuario;
 import usuario.Usuario;
@@ -34,11 +35,9 @@ import viajes.Viaje;
 
 public class ContextoAplicacion implements AutoCloseable {
 
-	private static final int MAX_CONDUCTORES_SIMULADOS = 3;
-
 	private final PlanificadorRutas motorVial;
 	private final GeneradorUbicacionesViales generadorUbicaciones;
-	private final GestorViajes gestor = new GestorViajes(this::viajeCambio);
+	private final Simulacion simulacion;
 
 	private volatile List<Usuario> usuarios = List.of();
 	private volatile List<Vehiculo> vehiculos = List.of();
@@ -52,6 +51,7 @@ public class ContextoAplicacion implements AutoCloseable {
 
 		this.motorVial = Objects.requireNonNull(motorVial, "motorVial");
 		this.generadorUbicaciones = Objects.requireNonNull(generadorUbicaciones, "generadorUbicaciones");
+		this.simulacion = new Simulacion(this::viajeCambio, generadorUbicaciones);
 	}
 
 	/**
@@ -99,8 +99,8 @@ public class ContextoAplicacion implements AutoCloseable {
 	public void cargar(Collection<Usuario> nuevosUsuarios, Collection<Vehiculo> nuevosVehiculos,
 			Collection<Servicio> nuevosServicios) {
 
-		gestor.detener();
-		gestor.limpiar();
+		simulacion.detener();
+		simulacion.limpiar();
 		conductoresSimulados = List.of();
 		usuarioLogueado = null;
 
@@ -170,7 +170,7 @@ public class ContextoAplicacion implements AutoCloseable {
 	 */
 	public void cerrarSesion() {
 
-		gestor.detener();
+		simulacion.detener();
 		conductoresSimulados = List.of();
 
 		Usuario saliente = usuarioLogueado;
@@ -187,21 +187,38 @@ public class ContextoAplicacion implements AutoCloseable {
 	// ------------------------------------------------------------------ viajes y simulacion (hilos)
 
 	/**
-	 * Arranca un hilo por conductor simulado (hasta {@value #MAX_CONDUCTORES_SIMULADOS}, sin contar al usuario de la
-	 * sesion). Cada uno espera viajes en la cola compartida del GestorViajes.
+	 * Arranca un hilo por conductor simulado (hasta simulacion.maximo.conductores, sin contar al usuario de la
+	 * sesion). Cada uno espera viajes en la cola compartida de la simulacion.
 	 */
 	public void iniciarSimulacion() {
-	    conductoresSimulados = usuarios.stream()
-	            .filter(u -> u.getConductor() != null)
-	            .filter(u -> !u.equals(usuarioLogueado))
-	            .limit(CargarParametros.getMaximoConductores())   // antes: MAX_CONDUCTORES_SIMULADOS
-	            .toList();
 
-	    gestor.iniciar(conductoresSimulados, new ConfiguracionSimulacion(
-	            CargarParametros.getSegundosTramo(),
-	            CargarParametros.getPasosTramo(),
-	            CargarParametros.getEsperaMaximaSegundos(),
-	            CargarParametros.getCapacidadBandeja()));
+		conductoresSimulados = usuarios.stream()
+				.filter(u -> u.getConductor() != null)
+				.filter(u -> !u.equals(usuarioLogueado))
+				.limit(CargarParametros.getMaximoConductores())
+				.toList();
+
+		List<Usuario> clientes = usuarios.stream()
+				.filter(u -> u.getCliente() != null)
+				.filter(u -> u.getRolActivo() == RolUsuario.CLIENTE)
+				.filter(u -> !u.equals(usuarioLogueado))
+				.toList();
+
+		simulacion.iniciar(conductoresSimulados, clientes, servicios, configuracionSimulacion());
+	}
+
+	private ConfiguracionSimulacion configuracionSimulacion() {
+
+		return new ConfiguracionSimulacion(
+				CargarParametros.getSegundosTramo(),
+				CargarParametros.getPasosTramo(),
+				CargarParametros.getEsperaMaximaSegundos(),
+				CargarParametros.getCapacidadBandeja(),
+				CargarParametros.getMaximoConductores(),
+				CargarParametros.getDuracionSimulacionSegundos(),
+				CargarParametros.getCantidadViajes(),
+				CargarParametros.getIntervaloViajesSegundos(),
+				CargarParametros.isProductorAutomatico());
 	}
 
 	/**
@@ -211,7 +228,7 @@ public class ContextoAplicacion implements AutoCloseable {
 	 */
 	public boolean solicitarViaje(Viaje viaje) {
 
-		return gestor.solicitar(viaje);
+		return simulacion.solicitar(viaje);
 	}
 
 	/**
@@ -226,7 +243,7 @@ public class ContextoAplicacion implements AutoCloseable {
 	/** Detiene los hilos de simulacion (se llama al cerrar la aplicacion). */
 	public void detener() {
 
-		gestor.detener();
+		simulacion.detener();
 	}
 
 	private void viajeCambio(Viaje viaje) {
@@ -243,7 +260,7 @@ public class ContextoAplicacion implements AutoCloseable {
 	@Override
 	public void close() {
 
-		gestor.detener();
+		simulacion.detener();
 		motorVial.close();
 	}
 }
