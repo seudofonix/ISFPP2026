@@ -8,32 +8,54 @@
 <?import javafx.scene.control.ToggleGroup?>
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.VBox?>
+<?import javafx.scene.text.Font?>
 
-<VBox alignment="CENTER" prefWidth="480.0" spacing="14.0" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" fx:controller="ui.impl.javafx.controller.LoginController">
+<VBox alignment="CENTER" prefWidth="480.0" spacing="6.0" stylesheets="@Login.fx.css" xmlns="http://javafx.com/javafx/26" xmlns:fx="http://javafx.com/fxml/1" fx:controller="ui.impl.javafx.controller.LoginController">
    <padding>
       <Insets bottom="28.0" left="28.0" right="28.0" top="28.0" />
    </padding>
    <children>
-      <Label style="-fx-font-size: 22px; -fx-font-weight: bold;" text="Movilidad Digital" />
-      <Label text="¿Como queres ingresar?" />
-      <HBox alignment="CENTER" spacing="24.0">
+      <VBox alignment="CENTER" prefHeight="76.0" prefWidth="424.0">
          <children>
-            <RadioButton fx:id="rbUsuario" mnemonicParsing="false" selected="true" text="Usuario">
-               <toggleGroup>
-                  <ToggleGroup fx:id="grupoRol" />
-               </toggleGroup>
-            </RadioButton>
-            <RadioButton fx:id="rbConductor" mnemonicParsing="false" text="Conductor" toggleGroup="$grupoRol" />
+            <Label contentDisplay="CENTER" prefHeight="59.0" prefWidth="212.0" style="-fx-font-size: 22px; -fx-font-weight: bold;" text="🚘 Movilidad Digital" textAlignment="CENTER">
+               <font>
+                  <Font name="BigBlueTerm437 Nerd Font Mono" size="13.0" />
+               </font>
+               <padding>
+                  <Insets bottom="20.0" />
+               </padding>
+            </Label>
+         </children>
+      </VBox>
+      <Label text="¿Como querés ingresar?" />
+      <HBox alignment="CENTER" prefHeight="18.0" prefWidth="424.0">
+         <children>
+            <HBox fx:id="hboxseleccion" alignment="CENTER" prefHeight="34.0" prefWidth="273.0" spacing="8.0" style="-fx-padding: 0px;">
+               <children>
+                  <RadioButton fx:id="rbUsuario" contentDisplay="CENTER" mnemonicParsing="false" nodeOrientation="LEFT_TO_RIGHT" prefHeight="28.0" selected="true" style="-fx-pref-width: 200px; -fx-min-width: 90px;" text="Usuario" textAlignment="CENTER">
+                     <toggleGroup>
+                        <ToggleGroup fx:id="grupoRol" />
+                     </toggleGroup>
+                  </RadioButton>
+                  <RadioButton fx:id="rbConductor" contentDisplay="CENTER" mnemonicParsing="false" nodeOrientation="RIGHT_TO_LEFT" prefHeight="28.0" style="-fx-pref-width: 200px; -fx-min-width: 90px;" text="Conductor" textAlignment="CENTER" toggleGroup="$grupoRol" />
+               </children>
+               <opaqueInsets>
+                  <Insets />
+               </opaqueInsets>
+            </HBox>
          </children>
       </HBox>
-      <ComboBox fx:id="cmbUsuarios" prefWidth="420.0" promptText="Elegi un usuario" />
-      <Label fx:id="lblDetalle" wrapText="true" />
+      <ComboBox fx:id="cmbUsuarios" prefWidth="420.0" promptText="Elegí un usuario">
+         <VBox.margin>
+            <Insets bottom="10.0" left="10.0" right="10.0" top="40.0" />
+         </VBox.margin></ComboBox>
+      <Label fx:id="lblDetalle" text="Seleccioná un usuario" wrapText="true" />
       <HBox alignment="CENTER" spacing="12.0">
          <children>
-            <Button fx:id="btnIngresar" defaultButton="true" disable="true" mnemonicParsing="false" onAction="#handleIngresar" text="Ingresar" />
-            <Button mnemonicParsing="false" onAction="#handleRecargarDatos" text="Recargar datos" />
+            <Button fx:id="btnIngresar" defaultButton="true" disable="true" mnemonicParsing="false" onAction="#handleIngresar" styleClass="primary-button" text="Ingresar" />
+            <Button mnemonicParsing="false" onAction="#handleRecargarDatos" styleClass="secondary-button" text="Recargar datos" />
          </children>
       </HBox>
-      <Label fx:id="lblEstado" text="Sin datos cargados" wrapText="true" />
+      <Label fx:id="lblEstado" text="⚠ No se pudo cargar los datos ⚠" wrapText="true" />
    </children>
 </VBox>

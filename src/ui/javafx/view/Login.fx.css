@@ -1,0 +1,9 @@
+@import url("main.fx.css");
+
+#lblEstado {
+    -fx-text-fill: #AAAAAA;
+}
+
+#lblDetalle {
+    -fx-text-fill: #AAAAAA;
+}

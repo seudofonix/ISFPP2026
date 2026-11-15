@@ -12,10 +12,11 @@
 <?import javafx.scene.layout.GridPane?>
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.Region?>
+<?import javafx.scene.layout.RowConstraints?>
 <?import javafx.scene.layout.VBox?>
 <?import javafx.scene.web.WebView?>
 
-<BorderPane prefHeight="700.0" prefWidth="1180.0" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" fx:controller="ui.impl.javafx.controller.PanelClienteController">
+<BorderPane prefHeight="700.0" prefWidth="1180.0" style="-fx-background-color: #FFFFFF;" stylesheets="@PanelCliente.fx.css" xmlns="http://javafx.com/javafx/26" xmlns:fx="http://javafx.com/fxml/1" fx:controller="ui.impl.javafx.controller.PanelClienteController">
    <top>
       <HBox alignment="CENTER_LEFT" spacing="10.0" BorderPane.alignment="CENTER">
          <padding>
@@ -55,6 +56,10 @@
                   <TextField fx:id="txtLonDestino" promptText="Longitud" GridPane.columnIndex="2" GridPane.rowIndex="1" />
                   <Button fx:id="btnGenerarDestino" mnemonicParsing="false" onAction="#handleGenerarDestinoAleatorio" text="Aleatorio" GridPane.columnIndex="3" GridPane.rowIndex="1" />
                </children>
+               <rowConstraints>
+                  <RowConstraints />
+                  <RowConstraints />
+               </rowConstraints>
             </GridPane>
             <HBox spacing="10.0">
                <children>
@@ -75,6 +80,17 @@
                   <Label style="-fx-text-fill: #149566;" text="Traslado (verde)" GridPane.columnIndex="0" GridPane.rowIndex="4" />
                   <Label fx:id="lblTraslado" text="-" GridPane.columnIndex="1" GridPane.rowIndex="4" />
                </children>
+               <columnConstraints>
+                  <ColumnConstraints />
+                  <ColumnConstraints />
+               </columnConstraints>
+               <rowConstraints>
+                  <RowConstraints />
+                  <RowConstraints />
+                  <RowConstraints />
+                  <RowConstraints />
+                  <RowConstraints />
+               </rowConstraints>
             </GridPane>
             <Label text="Estado del viaje" />
             <TextArea fx:id="txtAreaEstado" editable="false" prefRowCount="7" wrapText="true" />

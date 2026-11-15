@@ -1,0 +1,377 @@
+@import url("main.fx.css");
+
+/* ============================================================
+   2. TOP BAR
+   ============================================================ */
+
+.top-bar {
+    -fx-background-color: #ffffff;
+
+    -fx-border-color: #e4e4e7;
+    -fx-border-width: 0 0 1px 0;
+
+    -fx-padding: 12px 18px;
+}
+
+
+.username {
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #18181b;
+}
+
+
+/* Logout / secondary action */
+
+.logout-button {
+    -fx-background-color: transparent;
+
+    -fx-text-fill: #71717a;
+
+    -fx-font-size: 13px;
+
+    -fx-background-radius: 6px;
+
+    -fx-padding: 7px 10px;
+
+    -fx-cursor: hand;
+}
+
+.logout-button:hover {
+    -fx-background-color: #fef2f2;
+    -fx-text-fill: #dc2626;
+}
+
+.logout-button:pressed {
+    -fx-background-color: #fee2e2;
+}
+
+
+/* ============================================================
+   3. SIDEBAR
+   ============================================================ */
+
+.sidebar {
+    -fx-background-color: #ffffff;
+
+    -fx-border-color: #e4e4e7;
+    -fx-border-width: 0 1px 0 0;
+
+    -fx-padding: 18px;
+
+    -fx-spacing: 12px;
+}
+
+
+/* Secondary information */
+
+.secondary-label {
+    -fx-text-fill: #71717a;
+}
+
+
+/* ============================================================
+   5. TEXT FIELDS
+   ============================================================ */
+
+.text-field {
+    -fx-background-color: #ffffff;
+
+    -fx-border-color: #d4d4d8;
+    -fx-border-width: 1px;
+
+    -fx-border-radius: 7px;
+    -fx-background-radius: 7px;
+
+    -fx-padding: 8px 10px;
+
+    -fx-text-fill: #18181b;
+
+    -fx-prompt-text-fill: #a1a1aa;
+
+    -fx-font-size: 13px;
+}
+
+
+/* Hover */
+
+.text-field:hover {
+    -fx-border-color: #a1a1aa;
+}
+
+
+/* Focus */
+
+.text-field:focused {
+    -fx-border-color: #2563eb;
+    -fx-border-width: 2px;
+
+    -fx-background-insets: 0;
+}
+
+
+/* Disabled */
+
+.text-field:disabled {
+    -fx-background-color: #f4f4f5;
+    -fx-text-fill: #a1a1aa;
+}
+
+
+/* Selected value */
+
+.combo-box .list-cell {
+    -fx-background-color: transparent;
+
+    -fx-text-fill: #18181b;
+
+    -fx-padding: 7px 8px;
+}
+
+
+/* ============================================================
+   12. MAP MODE TOGGLE
+   ============================================================ */
+
+.map-toggle {
+    -fx-background-color: #f4f4f5;
+
+    -fx-text-fill: #3f3f46;
+
+    -fx-border-color: #d4d4d8;
+    -fx-border-width: 1px;
+
+    -fx-background-radius: 7px;
+    -fx-border-radius: 7px;
+
+    -fx-padding: 9px 12px;
+
+    -fx-cursor: hand;
+}
+
+
+/* Hover */
+
+.map-toggle:hover {
+    -fx-background-color: #e4e4e7;
+
+    -fx-border-color: #a1a1aa;
+}
+
+
+/* Active */
+
+.map-toggle:selected {
+    -fx-background-color: #eff6ff;
+
+    -fx-border-color: #2563eb;
+
+    -fx-text-fill: #1d4ed8;
+
+    -fx-font-weight: bold;
+}
+
+
+/* Active + hover */
+
+.map-toggle:selected:hover {
+    -fx-background-color: #dbeafe;
+}
+
+
+/* ============================================================
+   13. RESULT CARD
+   ============================================================ */
+
+.result-card {
+    -fx-background-color: #f8fafc;
+
+    -fx-border-color: #e4e4e7;
+    -fx-border-width: 1px;
+
+    -fx-border-radius: 10px;
+    -fx-background-radius: 10px;
+
+    -fx-padding: 15px;
+}
+
+
+/* Result labels */
+
+.result-label {
+    -fx-font-size: 13px;
+
+    -fx-text-fill: #71717a;
+}
+
+
+/* Result values */
+
+.result-value {
+    -fx-font-size: 13px;
+
+    -fx-font-weight: bold;
+
+    -fx-text-fill: #18181b;
+}
+
+
+/* Price */
+
+.price-value {
+    -fx-font-size: 21px;
+
+    -fx-font-weight: bold;
+
+    -fx-text-fill: #18181b;
+}
+
+
+/* ============================================================
+   14. PICKUP / TRANSFER
+   ============================================================ */
+
+.pickup-label {
+    -fx-font-size: 12px;
+
+    -fx-font-weight: bold;
+
+    -fx-text-fill: #1763c0;
+}
+
+
+.transfer-label {
+    -fx-font-size: 12px;
+
+    -fx-font-weight: bold;
+
+    -fx-text-fill: #149566;
+}
+
+
+.pickup-value {
+    -fx-text-fill: #1763c0;
+}
+
+
+.transfer-value {
+    -fx-text-fill: #149566;
+}
+
+
+/* ============================================================
+   15. STATUS / LOG AREA
+   ============================================================ */
+
+.status-area {
+    -fx-background-color: #18181b;
+
+    -fx-control-inner-background: #18181b;
+
+    -fx-text-fill: #e4e4e7;
+
+    -fx-font-family: "JetBrains Mono", "Consolas", monospace;
+
+    -fx-font-size: 12px;
+
+    -fx-border-color: #27272a;
+
+    -fx-border-radius: 8px;
+    -fx-background-radius: 8px;
+
+    -fx-padding: 8px;
+}
+
+
+/* TextArea content */
+
+.status-area .content {
+    -fx-background-color: #18181b;
+
+    -fx-background-radius: 8px;
+}
+
+
+/* ============================================================
+   16. SCROLLBAR
+   ============================================================ */
+
+.scroll-bar {
+    -fx-background-color: transparent;
+}
+
+.scroll-bar .track {
+    -fx-background-color: transparent;
+}
+
+.scroll-bar .thumb {
+    -fx-background-color: #d4d4d8;
+
+    -fx-background-radius: 10px;
+}
+
+.scroll-bar .thumb:hover {
+    -fx-background-color: #a1a1aa;
+}
+
+
+/* ============================================================
+   17. SEPARATORS
+   ============================================================ */
+
+.separator .line {
+    -fx-border-color: #e4e4e7;
+}
+
+
+/* ============================================================
+   18. DISABLED CONTROLS
+   ============================================================ */
+
+.button:disabled {
+    -fx-opacity: 0.55;
+
+    -fx-cursor: default;
+}
+
+.combo-box:disabled {
+    -fx-opacity: 0.55;
+
+    -fx-cursor: default;
+}
+
+
+/* ============================================================
+   19. FOCUS
+   ============================================================ */
+
+.button:focused {
+    -fx-border-color: #93c5fd;
+    -fx-border-width: 2px;
+}
+
+.text-field:focused,
+.combo-box:focused {
+    -fx-effect: dropshadow(
+        gaussian,
+        rgba(37, 99, 235, 0.15),
+        6,
+        0,
+        0,
+        0
+    );
+}
+
+
+/* ============================================================
+   20. MAP
+   ============================================================ */
+
+/*
+   El WebView normalmente no necesita styling.
+   El mapa debería ocupar todo el espacio disponible.
+*/
+
+.map-view {
+    -fx-background-color: #e5e7eb;
+}
