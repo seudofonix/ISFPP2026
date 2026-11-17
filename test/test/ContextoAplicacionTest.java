@@ -34,7 +34,7 @@ import vehiculo.Vehiculo;
 import viajes.EstadoViaje;
 import viajes.Viaje;
 
-/** Contexto + escenario inicial + hilos de los conductores simulados (GestorViajes). */
+/** Contexto + escenario inicial + hilos de los conductores simulados (Simulacion). */
 class ContextoAplicacionTest {
 
 	private MotorFalso motor;

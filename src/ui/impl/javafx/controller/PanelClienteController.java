@@ -4,7 +4,7 @@
  * CONTROLADOR de PanelCliente.fxml. El usuario elige origen y destino con clics en el mapa (se le muestran la
  * calle y la altura, no las coordenadas), cotiza, solicita el viaje y puede cancelarlo. Coordina la logica
  * (ValidacionUbicaciones, Movilidad, PlanificacionViajeService), el mapa (VisualizadorMapa) y los conductores
- * simulados que corren en hilos (ContextoAplicacion / GestorViajes). No implementa algoritmos viales ni conoce
+ * simulados que corren en hilos (ContextoAplicacion / Simulacion). No implementa algoritmos viales ni conoce
  * Leaflet.
  */
 package ui.impl.javafx.controller;
@@ -33,7 +33,6 @@ import javafx.scene.control.ToggleGroup;
 import javafx.scene.layout.VBox;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
-import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 import javafx.scene.control.TextInputDialog;
 import javafx.scene.web.WebView;

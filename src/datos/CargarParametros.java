@@ -35,6 +35,10 @@ public class CargarParametros {
 	private static double esperaMaximaSegundos = 60.0;
 	private static int capacidadBandeja = 50;
 	private static int maximoConductores = 3;
+	private static double duracionSimulacionSegundos = 0.0;
+	private static int cantidadViajes = 0;
+	private static double intervaloViajesSegundos = 5.0;
+	private static boolean productorAutomatico = false;
 	// Motor de rutas
 	private static String rutasMotor = "graphhopper";
 	private static String rutasOsm = "mapas/puerto_madryn_ampliado.osm";
@@ -86,6 +90,10 @@ public class CargarParametros {
 		esperaMaximaSegundos = numero(properties, "simulacion.espera.maxima.segundos", 60.0);
 		capacidadBandeja = entero(properties, "simulacion.capacidad.cola", 50);
 		maximoConductores = entero(properties, "simulacion.maximo.conductores", 3);
+		duracionSimulacionSegundos = numero(properties, "simulacion.duracion.segundos", 0.0);
+		cantidadViajes = entero(properties, "simulacion.cantidad.viajes", 0);
+		intervaloViajesSegundos = numero(properties, "simulacion.intervalo.viajes.segundos", 5.0);
+		productorAutomatico = booleano(properties, "simulacion.productor.automatico", false);
 		toleranciaAjusteMetros = numero(properties, "ajuste.tolerancia.metros", 200.0);
 
 		rutasMotor = texto(properties, "rutas.motor", "graphhopper").toLowerCase();
@@ -100,6 +108,10 @@ public class CargarParametros {
 		        || capacidadBandeja <= 0 || maximoConductores <= 0) {
 		    throw new IOException("Los parametros de simulacion de config.properties deben ser mayores que 0.");
 		}
+		if (duracionSimulacionSegundos < 0 || cantidadViajes < 0 || intervaloViajesSegundos <= 0) {
+		    throw new IOException("La duracion y la cantidad de viajes no pueden ser negativas, "
+		            + "y simulacion.intervalo.viajes.segundos debe ser mayor que 0.");
+		}
 		if (velocidadMediaKmh <= 0) {
 
 			throw new IOException("velocidad.media.kmh debe ser mayor que 0 en config.properties");
@@ -109,6 +121,28 @@ public class CargarParametros {
 
 			throw new IOException("ajuste.tolerancia.metros debe ser mayor que 0 en config.properties");
 		}
+	}
+
+	private static boolean booleano(Properties properties, String clave, boolean defecto) throws IOException {
+
+		String valor = properties.getProperty(clave);
+
+		if (valor == null || valor.isBlank()) {
+
+			return defecto;
+		}
+
+		if ("true".equalsIgnoreCase(valor.trim())) {
+
+			return true;
+		}
+
+		if ("false".equalsIgnoreCase(valor.trim())) {
+
+			return false;
+		}
+
+		throw new IOException("Valor invalido para '" + clave + "' en config.properties: " + valor);
 	}
 
 	private static int entero(Properties properties, String clave, int defecto) throws IOException {
@@ -298,4 +332,8 @@ public class CargarParametros {
 	public static double getEsperaMaximaSegundos() { return esperaMaximaSegundos; }
 	public static int getCapacidadBandeja() { return capacidadBandeja; }
 	public static int getMaximoConductores() { return maximoConductores; }
+	public static double getDuracionSimulacionSegundos() { return duracionSimulacionSegundos; }
+	public static int getCantidadViajes() { return cantidadViajes; }
+	public static double getIntervaloViajesSegundos() { return intervaloViajesSegundos; }
+	public static boolean isProductorAutomatico() { return productorAutomatico; }
 }

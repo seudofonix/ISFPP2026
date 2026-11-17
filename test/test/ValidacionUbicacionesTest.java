@@ -16,7 +16,7 @@ class ValidacionUbicacionesTest {
 
 		IllegalArgumentException e = assertThrows(IllegalArgumentException.class,
 				() -> ValidacionUbicaciones.validarYAjustar(new Ubicacion(40.0, -3.0), new MotorFalso()));
-		assertTrue(e.getMessage().contains("fuera del area"));
+		assertTrue(e.getMessage().contains("fuera del área"));
 	}
 
 	@Test
